@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, Volume2, MousePointer2, Layout
+  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, Volume2, MousePointer2, Layout, ArrowLeft
 } from 'lucide-react';
 
 // --- INTERFACES ---
@@ -12,11 +12,11 @@ interface Block {
   content: string;
   actionType: string; // 'none' | 'hover' | 'long-hover' | 'triple-click' | 'input-match'
   actionResult: string; // 'discover' | 'navigate' | 'cursor' | 'audio' | 'floating'
-  clueLink: string;
-  triggerValue?: string; // Palabra clave o texto de entrada
-  mouseIcon?: string;    // URL de imagen para el cursor
-  audioUrl?: string;     // URL de audio
-  floatingProps?: {      // Propiedades para componente flotante
+  clueLink: string;     // Puede ser un ID de página o una URL externa
+  triggerValue?: string; 
+  mouseIcon?: string;    
+  audioUrl?: string;     
+  floatingProps?: {      
     type: string;
     content: string;
     pos: { top?: string; bottom?: string; left?: string; right?: string };
@@ -70,6 +70,7 @@ const themeStyles = `
 export default function App() {
   const [config, setConfig] = useState<Config>(INITIAL_DATA);
   const [currentPageId, setCurrentPageId] = useState("");
+  const [history, setHistory] = useState<string[]>([]); // Historial de navegación
   const [isDev, setIsDev] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,7 +83,6 @@ export default function App() {
   const [rawJson, setRawJson] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   
-  // Estados de interacción global
   const [globalCursor, setGlobalCursor] = useState<string | null>(null);
   const [activeFloating, setActiveFloating] = useState<any[]>([]);
 
@@ -92,7 +92,7 @@ export default function App() {
     window.addEventListener('resize', checkEnv);
     
     const loadData = async () => {
-      const saved = localStorage.getItem('enigma_v11_actions');
+      const saved = localStorage.getItem('enigma_v12_navigation');
       if (saved) {
         const parsed = JSON.parse(saved);
         setConfig(parsed);
@@ -127,7 +127,7 @@ export default function App() {
 
   useEffect(() => {
     if (config !== INITIAL_DATA) {
-      localStorage.setItem('enigma_v11_actions', JSON.stringify(config));
+      localStorage.setItem('enigma_v12_navigation', JSON.stringify(config));
     }
   }, [config]);
 
@@ -185,6 +185,27 @@ export default function App() {
     if (password === "Daniela") {
       setIsDev(true); setShowLogin(false); setSidebarOpen(true); setPassword("");
     } else alert("Clave incorrecta");
+  };
+
+  const navigateTo = (id: string) => {
+    if (!id) return;
+    if (id.startsWith('http')) {
+      window.open(id, '_blank');
+      return;
+    }
+    setHistory(prev => [...prev, currentPageId]);
+    setCurrentPageId(id);
+    window.scrollTo(0,0);
+    setActiveFloating([]);
+  };
+
+  const goBack = () => {
+    if (history.length === 0) return;
+    const lastPage = history[history.length - 1];
+    setHistory(prev => prev.slice(0, -1));
+    setCurrentPageId(lastPage);
+    window.scrollTo(0,0);
+    setActiveFloating([]);
   };
 
   const currentPage = config.pages[currentPageId] || config.pages[config.homePageId];
@@ -346,10 +367,19 @@ export default function App() {
                             )}
 
                             {(b.actionResult === 'discover' || b.actionResult === 'navigate') && (
-                              <select value={b.clueLink} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded border border-zinc-800 text-blue-400">
-                                 <option value="">Ir a página...</option>
-                                 {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid]?.title || pid}</option>)}
-                              </select>
+                              <div className="space-y-1">
+                                <label className="text-[8px] uppercase text-zinc-600 font-black">Destino (ID o URL)</label>
+                                <input 
+                                  list="pages-list"
+                                  placeholder="Escribe ID o pega URL..."
+                                  value={b.clueLink} 
+                                  onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} 
+                                  className="w-full bg-zinc-900 p-2 rounded border border-zinc-800 text-blue-400"
+                                />
+                                <datalist id="pages-list">
+                                  {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid]?.title || pid}</option>)}
+                                </datalist>
+                              </div>
                             )}
                          </div>
 
@@ -380,12 +410,14 @@ export default function App() {
         )}
 
         <div className={`flex-1 overflow-y-auto scroll-smooth transition-all duration-700 custom-scroll ${isDev ? 'p-6 md:p-12 bg-slate-100' : 'p-0 bg-white'}`}>
-          <div className={`mx-auto transition-all duration-700 min-h-full ${isDev ? 'bg-white shadow-2xl rounded-[3rem] border-[14px] border-zinc-900 max-w-[420px] md:max-w-[1400px] relative overflow-hidden' : 'w-full min-h-screen'}`}>
+          <div className={`mx-auto transition-all duration-700 min-h-full ${isDev ? 'bg-white shadow-2xl rounded-[3rem] border-[14px] border-zinc-900 max-w-[420px] md:max-w-7xl relative overflow-hidden' : 'w-full min-h-screen'}`}>
              <PageRenderer 
                 page={currentPage} 
                 isDev={isDev} 
                 isMobileEnv={isMobileEnv}
-                onNavigate={(id: string) => { setCurrentPageId(id); window.scrollTo(0,0); setActiveFloating([]); }} 
+                history={history}
+                onNavigate={navigateTo} 
+                onBack={goBack}
                 onFooterClick={() => {
                   const n = devClicks + 1; setDevClicks(n);
                   if (n >= 5 && n < 10) setDevMsg(`Activando editor en ${10 - n}...`);
@@ -419,7 +451,7 @@ export default function App() {
   );
 }
 
-function PageRenderer({ page, isDev, onNavigate, onFooterClick, onSelectBlock, msg, isMobileEnv, setGlobalCursor, activeFloating, setActiveFloating }: any) {
+function PageRenderer({ page, isDev, onNavigate, onBack, history, onFooterClick, onSelectBlock, msg, isMobileEnv, setGlobalCursor, activeFloating, setActiveFloating }: any) {
   const themes: any = {
     default: "bg-white text-zinc-900",
     journal: "theme-journal",
@@ -440,6 +472,16 @@ function PageRenderer({ page, isDev, onNavigate, onFooterClick, onSelectBlock, m
     <div className={`${themes[page?.theme] || themes.default} w-full transition-all duration-1000 select-none relative min-h-screen flex flex-col items-center`} style={containerStyle}>
       {page?.theme === 'retro-tv' && <><div className="scanlines"></div><div className="flicker"></div></>}
       
+      {/* BOTÓN VOLVER (BACK) */}
+      {!isDev && history.length > 0 && (
+        <button 
+          onClick={onBack}
+          className="absolute top-6 left-6 z-[60] p-3 bg-white/10 backdrop-blur-md border border-current/20 rounded-full hover:bg-white/20 transition-all active:scale-90"
+        >
+          <ArrowLeft size={20} />
+        </button>
+      )}
+
       <div className={`${contentWidthClass} w-full space-y-20 py-16 md:py-32 px-8 md:px-24 pb-40 z-20 relative transition-all duration-500`}>
         <header className="border-b-4 border-current pb-10 mb-20 animate-in slide-in-from-top duration-700">
           <h1 className="text-5xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] drop-shadow-sm">{page?.title || "Sin Título"}</h1>
@@ -474,7 +516,6 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor, se
 
   const executeAction = () => {
     setRevealed(true);
-    // Ejecutar efectos secundarios según configuración
     if (block.actionResult === 'navigate' && block.clueLink) onNavigate(block.clueLink);
     if (block.actionResult === 'cursor' && block.mouseIcon) setGlobalCursor(block.mouseIcon);
     if (block.actionResult === 'audio' && block.audioUrl) new Audio(block.audioUrl).play();
@@ -518,7 +559,9 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor, se
 
       {revealed && block.actionResult === 'discover' && block.clueLink && !isDev && (
         <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in fade-in duration-500 z-50">
-           <button onClick={(e) => { e.stopPropagation(); onNavigate(block.clueLink); }} className="bg-black text-white px-10 py-5 rounded-full font-black uppercase text-xs tracking-widest shadow-2xl flex items-center gap-3 border border-white/20 transition-all hover:scale-110"><Share2 size={16}/> DESCUBRIR</button>
+           <button onClick={(e) => { e.stopPropagation(); onNavigate(block.clueLink); }} className="bg-black text-white px-10 py-5 rounded-full font-black uppercase text-xs tracking-widest shadow-2xl flex items-center gap-3 border border-white/20 transition-all hover:scale-110">
+              {block.clueLink.startsWith('http') ? <ExternalLink size={16}/> : <Share2 size={16}/>} DESCUBRIR
+           </button>
         </div>
       )}
     </div>
