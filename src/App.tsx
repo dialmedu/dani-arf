@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft, MousePointer2, Volume2, Maximize, Link as LinkIcon, GitBranch, Paintbrush
+  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft, MousePointer2, Volume2, Maximize, Link as LinkIcon, GitBranch, Paintbrush, AlignCenter
 } from 'lucide-react';
 
 // --- INTERFACES ---
@@ -19,7 +19,7 @@ interface Block {
   audioUrl?: string;     
   posProps?: { top?: string; bottom?: string; left?: string; right?: string }; 
   subBlock?: Block; 
-  extraStyles?: any; // Nuevo: Atributos CSS personalizados
+  extraStyles?: any; // Atributos CSS personalizados (ahora gestionados vía formulario)
   options: { scale: number };
 }
 
@@ -99,7 +99,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('pages');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSubBlock, setEditingSubBlock] = useState(false); 
-  const [blockEditTab, setBlockEditTab] = useState<'content' | 'style'>('content'); // Nueva pestaña interna
+  const [blockEditTab, setBlockEditTab] = useState<'content' | 'style'>('content'); 
   const [password, setPassword] = useState("");
   const [devClicks, setDevClicks] = useState(0);
   const [devMsg, setDevMsg] = useState("");
@@ -248,6 +248,23 @@ export default function App() {
     setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
   };
 
+  const updateBlockStyles = (styles: any) => {
+    if (editingSubBlock) {
+      const pg = config.pages[currentPageId];
+      const blocks = pg.blocks.map(b => {
+        if (b.id === editingId) {
+          return { ...b, subBlock: { ...(b.subBlock as Block), extraStyles: { ...(b.subBlock?.extraStyles || {}), ...styles } } };
+        }
+        return b;
+      });
+      setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
+    } else {
+      const pg = config.pages[currentPageId];
+      const blocks = pg.blocks.map(b => b.id === editingId ? { ...b, extraStyles: { ...(b.extraStyles || {}), ...styles } } : b);
+      setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
+    }
+  };
+
   const currentPage = config.pages[currentPageId] || config.pages[config.homePageId];
 
   return (
@@ -358,10 +375,9 @@ export default function App() {
                       
                       {isCurrent && (
                         <div className="p-0 bg-zinc-950 border-t border-zinc-800">
-                           {/* Pestañas de edición interna del bloque */}
                            <div className="flex border-b border-zinc-800 bg-zinc-900">
                              <button onClick={() => setBlockEditTab('content')} className={`flex-1 p-3 flex items-center justify-center gap-2 font-black uppercase text-[8px] transition-all ${blockEditTab === 'content' ? 'text-blue-400 bg-zinc-950 border-b border-blue-400' : 'text-zinc-600'}`}><FileCode size={12}/> Contenido</button>
-                             <button onClick={() => setBlockEditTab('style')} className={`flex-1 p-3 flex items-center justify-center gap-2 font-black uppercase text-[8px] transition-all ${blockEditTab === 'style' ? 'text-amber-400 bg-zinc-950 border-b border-amber-400' : 'text-zinc-600'}`}><Paintbrush size={12}/> Estilo CSS</button>
+                             <button onClick={() => setBlockEditTab('style')} className={`flex-1 p-3 flex items-center justify-center gap-2 font-black uppercase text-[8px] transition-all ${blockEditTab === 'style' ? 'text-amber-400 bg-zinc-950 border-b border-amber-400' : 'text-zinc-600'}`}><Paintbrush size={12}/> Estilo</button>
                            </div>
 
                            <div className="p-4 space-y-4">
@@ -396,10 +412,10 @@ export default function App() {
                                    </div>
                                  )}
 
-                                 <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 space-y-3">
+                                 <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 space-y-3 text-[10px]">
                                     <label className="text-[8px] uppercase text-blue-400 font-black block">Lógica e Interacción</label>
                                     <div className="grid grid-cols-2 gap-2">
-                                       <select value={blockToEdit.actionType} onChange={e => { if (editingSubBlock) updateSubBlock({ actionType: e.target.value }); else updateCurrentBlock({ actionType: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[9px]">
+                                       <select value={blockToEdit.actionType} onChange={e => { if (editingSubBlock) updateSubBlock({ actionType: e.target.value }); else updateCurrentBlock({ actionType: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded">
                                           <option value="none">Sin Acción</option><option value="hover">Hover</option><option value="long-hover">Long Hover</option><option value="click">Click</option><option value="double-click">Doble Click</option><option value="triple-click">3 Clicks</option><option value="input-match">Clave Secreta</option>
                                        </select>
                                        <select value={blockToEdit.actionResult} onChange={e => {
@@ -408,7 +424,7 @@ export default function App() {
                                             upd.subBlock = { id: 'child-' + Date.now(), type: 'text', content: 'Contenido...', position: 'relative', actionType: 'none', actionResult: 'discover', clueLink: '', options: { scale: 100 }, extraStyles: {} };
                                           }
                                           if (editingSubBlock) updateSubBlock(upd); else updateCurrentBlock(upd);
-                                       }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[9px]">
+                                       }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded">
                                           <option value="discover">Botón Descubrir</option><option value="navigate">Nav Directa</option><option value="cursor">Cambiar Cursor</option><option value="audio">Audio</option><option value="appear">Aparecer Hijo</option><option value="replace">Reemplazar</option>
                                        </select>
                                     </div>
@@ -426,7 +442,7 @@ export default function App() {
                                     )}
 
                                     {(blockToEdit.actionResult === 'appear' || blockToEdit.actionResult === 'replace') && (
-                                      <button onClick={() => setEditingSubBlock(true)} className="w-full p-2 bg-amber-600 text-black text-[8px] font-black uppercase rounded-lg hover:bg-amber-500 flex items-center justify-center gap-2 shadow-lg"><Edit3 size={10}/> Abrir Componente Hijo</button>
+                                      <button onClick={() => setEditingSubBlock(true)} className="w-full p-2 bg-amber-600 text-black text-[8px] font-black uppercase rounded-lg hover:bg-amber-500 flex items-center justify-center gap-2 shadow-lg"><Edit3 size={10}/> Configurar Hijo</button>
                                     )}
 
                                     {(blockToEdit.actionResult === 'discover' || blockToEdit.actionResult === 'navigate') && (
@@ -449,21 +465,55 @@ export default function App() {
                                  <textarea value={blockToEdit.content} onChange={e => { if(editingSubBlock) updateSubBlock({content: e.target.value}); else updateCurrentBlock({content: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[80px] outline-none" placeholder="Escribe el contenido aquí..." />
                                </div>
                              ) : (
-                               <div className="space-y-4 animate-in fade-in">
-                                  <label className="text-[8px] uppercase text-zinc-600 font-black block mb-1">Estilos CSS (JSON)</label>
-                                  <textarea 
-                                    value={JSON.stringify(blockToEdit.extraStyles || {}, null, 2)} 
-                                    onChange={e => {
-                                      try {
-                                        const parsed = JSON.parse(e.target.value);
-                                        if (editingSubBlock) updateSubBlock({ extraStyles: parsed });
-                                        else updateCurrentBlock({ extraStyles: parsed });
-                                      } catch (err) { /* Ignorar errores de escritura temporal */ }
-                                    }} 
-                                    className="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] text-amber-500 font-mono min-h-[200px] outline-none" 
-                                    placeholder='{ "borderRadius": "20px", "opacity": "0.8" }'
-                                  />
-                                  <p className="text-[8px] text-zinc-500 italic">Usa nombres en camelCase (ej: backgroundColor en vez de background-color).</p>
+                               <div className="space-y-4 animate-in fade-in text-[10px]">
+                                  <h4 className="text-[8px] uppercase text-amber-500 font-black mb-2 flex items-center gap-2"><Paintbrush size={10}/> Editor de Estilo Visual</h4>
+                                  
+                                  <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Ancho (Width)</label>
+                                        <input value={blockToEdit.extraStyles?.width || ""} onChange={e => updateBlockStyles({ width: e.target.value })} placeholder="Ej: 100% o 300px" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Ancho Máximo</label>
+                                        <input value={blockToEdit.extraStyles?.maxWidth || ""} onChange={e => updateBlockStyles({ maxWidth: e.target.value })} placeholder="Ej: 800px" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Padding (Relleno)</label>
+                                        <input value={blockToEdit.extraStyles?.padding || ""} onChange={e => updateBlockStyles({ padding: e.target.value })} placeholder="Ej: 20px" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Margin (Margen)</label>
+                                        <input value={blockToEdit.extraStyles?.margin || ""} onChange={e => updateBlockStyles({ margin: e.target.value })} placeholder="Ej: 10px 0" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Borde (Border)</label>
+                                        <input value={blockToEdit.extraStyles?.border || ""} onChange={e => updateBlockStyles({ border: e.target.value })} placeholder="Ej: 2px solid red" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Radio Borde</label>
+                                        <input value={blockToEdit.extraStyles?.borderRadius || ""} onChange={e => updateBlockStyles({ borderRadius: e.target.value })} placeholder="Ej: 12px" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Fondo (BG Color)</label>
+                                        <input value={blockToEdit.extraStyles?.backgroundColor || ""} onChange={e => updateBlockStyles({ backgroundColor: e.target.value })} placeholder="Ej: #ff0000" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                     <div className="space-y-1">
+                                        <label className="text-zinc-600 block">Color Texto</label>
+                                        <input value={blockToEdit.extraStyles?.color || ""} onChange={e => updateBlockStyles({ color: e.target.value })} placeholder="Ej: white" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                     </div>
+                                  </div>
+
+                                  <div className="space-y-1 pt-2">
+                                     <label className="text-zinc-600 block">Sombra (Box Shadow)</label>
+                                     <input value={blockToEdit.extraStyles?.boxShadow || ""} onChange={e => updateBlockStyles({ boxShadow: e.target.value })} placeholder="Ej: 0 10px 30px rgba(0,0,0,0.5)" className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-white" />
+                                  </div>
+
+                                  <button 
+                                    onClick={() => updateBlockStyles({ marginLeft: "auto", marginRight: "auto", display: "block" })}
+                                    className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all font-bold text-blue-400"
+                                  >
+                                    <AlignCenter size={14}/> Auto-Centrar Elemento
+                                  </button>
                                </div>
                              )}
 
@@ -522,7 +572,7 @@ export default function App() {
         )}
 
         <div className={`flex-1 overflow-y-auto scroll-smooth transition-all duration-700 custom-scroll ${isDev ? 'p-6 md:p-12 bg-slate-100' : 'p-0 bg-white'}`}>
-          <div className={`mx-auto transition-all duration-700 min-h-full ${isDev ? 'bg-white shadow-2xl rounded-[3rem] border-[14px] border-zinc-900 max-w-[420px] md:max-w-[1400px] relative overflow-hidden' : 'w-full min-h-screen'}`}>
+          <div className={`mx-auto transition-all duration-700 min-h-full ${isDev ? 'bg-white shadow-2xl rounded-[3rem] border-[14px] border-zinc-900 max-w-[420px] md:max-w-7xl relative overflow-hidden' : 'w-full min-h-screen'}`}>
              <PageRenderer 
                 page={currentPage} 
                 isDev={isDev} 
@@ -647,7 +697,6 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor }: 
   return (
     <div onMouseEnter={onEnter} onMouseLeave={onLeave} onClick={onClick} className="relative transition-all duration-500 h-full w-full">
       <div className={`${revealed && (block.actionResult === 'discover' || block.actionResult === 'navigate') ? 'opacity-10 blur-xl pointer-events-none scale-95' : 'transition-all duration-700'}`}>
-        {/* Renderizado de Reemplazo */}
         {revealed && block.actionResult === 'replace' && block.subBlock ? (
            <div className="animate-in fade-in zoom-in duration-500">
               <BlockRenderer block={block.subBlock} />
@@ -662,7 +711,6 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor }: 
         )}
       </div>
 
-      {/* Renderizado de Aparición */}
       {revealed && block.actionResult === 'appear' && block.subBlock && (
         <div className={`animate-in fade-in duration-500 ${block.subBlock.position === 'fixed' ? 'fixed z-[110]' : 'mt-6'}`}
              style={{
