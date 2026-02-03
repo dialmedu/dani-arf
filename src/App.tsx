@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, Volume2, MousePointer2, Layout, ArrowLeft
+  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft
 } from 'lucide-react';
 
 // --- INTERFACES ---
@@ -10,9 +10,9 @@ interface Block {
   id: string;
   type: string;
   content: string;
-  actionType: string; // 'none' | 'hover' | 'long-hover' | 'triple-click' | 'input-match'
-  actionResult: string; // 'discover' | 'navigate' | 'cursor' | 'audio' | 'floating'
-  clueLink: string;     // Puede ser un ID de página o una URL externa
+  actionType: string; 
+  actionResult: string; 
+  clueLink: string;     
   triggerValue?: string; 
   mouseIcon?: string;    
   audioUrl?: string;     
@@ -32,8 +32,8 @@ interface Page {
   blocks: Block[];
   no_pc?: boolean;     
   no_mobile?: boolean; 
-  layoutWidth?: string;
-  backgroundImage?: string;
+  layoutWidth?: string; // "100%" (default) o "80%"
+  backgroundImage?: string; // URL de fondo opcional
 }
 
 interface Config {
@@ -58,11 +58,35 @@ const INITIAL_DATA: Config = {
 
 const themeStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime&family=Inter:wght@400;700;900&display=swap');
-  .theme-journal { font-family: 'Special Elite', cursive; background-color: #f4e4bc; background-image: url('https://www.transparenttextures.com/patterns/old-map.png'); color: #2c1e11; box-shadow: inset 0 0 100px rgba(0,0,0,0.1); }
-  .theme-tv { background-color: #0a0a0a; color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.6); font-family: 'Courier Prime', monospace; }
+  
+  /* FIX PARA PANTALLA COMPLETA Y #ROOT */
+  html, body, #root {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .theme-journal { 
+    font-family: 'Special Elite', cursive; 
+    background-color: #f4e4bc; 
+    background-image: url('https://www.transparenttextures.com/patterns/old-map.png'); 
+    color: #2c1e11; 
+    box-shadow: inset 0 0 100px rgba(0,0,0,0.1); 
+  }
+  
+  .theme-tv { 
+    background-color: #0a0a0a; 
+    color: #10b981; 
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.6); 
+    font-family: 'Courier Prime', monospace; 
+  }
+
   .scanlines { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; }
   @keyframes flicker { 0% { opacity: 0.1; } 100% { opacity: 0.12; } }
   .flicker { animation: flicker 0.1s infinite; position: absolute; inset: 0; pointer-events: none; z-index: 11; background: white; opacity: 0.03; }
+  
   .custom-scroll::-webkit-scrollbar { width: 6px; }
   .custom-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
 `;
@@ -70,7 +94,7 @@ const themeStyles = `
 export default function App() {
   const [config, setConfig] = useState<Config>(INITIAL_DATA);
   const [currentPageId, setCurrentPageId] = useState("");
-  const [history, setHistory] = useState<string[]>([]); // Historial de navegación
+  const [history, setHistory] = useState<string[]>([]);
   const [isDev, setIsDev] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -92,7 +116,7 @@ export default function App() {
     window.addEventListener('resize', checkEnv);
     
     const loadData = async () => {
-      const saved = localStorage.getItem('enigma_v12_navigation');
+      const saved = localStorage.getItem('enigma_v13_fixed');
       if (saved) {
         const parsed = JSON.parse(saved);
         setConfig(parsed);
@@ -127,7 +151,7 @@ export default function App() {
 
   useEffect(() => {
     if (config !== INITIAL_DATA) {
-      localStorage.setItem('enigma_v12_navigation', JSON.stringify(config));
+      localStorage.setItem('enigma_v13_fixed', JSON.stringify(config));
     }
   }, [config]);
 
@@ -236,7 +260,7 @@ export default function App() {
             <button onClick={() => setSidebarOpen(false)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
           </div>
 
-          <div className="flex border-b border-zinc-900 shrink-0 overflow-x-auto hide-scrollbar">
+          <div className="flex border-b border-zinc-900 shrink-0 overflow-x-auto">
             {[
               { id: 'pages', icon: Home, label: 'Páginas' },
               { id: 'design', icon: Palette, label: 'Diseño' },
@@ -297,6 +321,19 @@ export default function App() {
                        ))}
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-zinc-600 block mb-2">Visibilidad</label>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-3 p-3 bg-zinc-900 rounded-xl border border-zinc-800 cursor-pointer">
+                        <input type="checkbox" checked={!currentPage.no_pc} onChange={e => setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, no_pc: !e.target.checked}}})} className="w-4 h-4 rounded accent-blue-500" />
+                        <span className="text-xs font-bold text-white uppercase">Mostrar en PC</span>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 bg-zinc-900 rounded-xl border border-zinc-800 cursor-pointer">
+                        <input type="checkbox" checked={!currentPage.no_mobile} onChange={e => setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, no_mobile: !e.target.checked}}})} className="w-4 h-4 rounded accent-blue-500" />
+                        <span className="text-xs font-bold text-white uppercase">Mostrar en Móvil</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -309,81 +346,17 @@ export default function App() {
                     <div className="p-3 flex items-center justify-between cursor-grab">
                       <div className="flex items-center gap-2">
                          <GripVertical size={12} className="opacity-30" />
-                         <span onClick={() => setEditingId(editingId === b.id ? null : b.id)} className="text-[9px] font-black uppercase text-zinc-500 truncate max-w-[200px]">{b.type}: {b.content.substring(0,15)}...</span>
+                         <span onClick={() => setEditingId(editingId === b.id ? null : b.id)} className="text-[9px] font-black uppercase text-zinc-500 truncate max-w-[150px]">{b.type}: {b.content.substring(0,10)}...</span>
                       </div>
                       <Settings onClick={() => setEditingId(editingId === b.id ? null : b.id)} size={12} className="text-zinc-600 cursor-pointer hover:text-white" />
                     </div>
                     {editingId === b.id && (
-                      <div className="p-4 bg-zinc-950 border-t border-zinc-800 space-y-4 text-xs">
-                         <div className="grid grid-cols-2 gap-2">
-                           <div className="space-y-1">
-                              <label className="text-[8px] uppercase text-zinc-600 font-black">Tipo Bloque</label>
-                              <select value={b.type} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].type = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded border border-zinc-800">
-                                <option value="text">Texto</option><option value="image">Imagen</option><option value="video">Video</option><option value="html">HTML</option>
-                              </select>
-                           </div>
-                           <div className="space-y-1">
-                              <label className="text-[8px] uppercase text-zinc-600 font-black">Acción Disparador</label>
-                              <select value={b.actionType} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].actionType = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded border border-zinc-800">
-                                <option value="none">Sin Acción</option><option value="hover">Al pasar mouse</option><option value="long-hover">Esperar 3s</option><option value="triple-click">3 Clics</option><option value="input-match">Coincidir Texto</option>
-                              </select>
-                           </div>
-                         </div>
-
-                         <div className="space-y-1">
-                            <label className="text-[8px] uppercase text-zinc-600 font-black">Contenido Principal</label>
-                            <textarea value={b.content} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].content = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[60px] outline-none" />
-                         </div>
-
-                         <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 space-y-3">
-                            <label className="text-[9px] uppercase text-blue-400 font-black flex items-center gap-1"><Sparkles size={10}/> Respuesta al Misterio</label>
-                            <select value={b.actionResult} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].actionResult = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded border border-zinc-800">
-                               <option value="discover">Botón "Descubrir"</option><option value="navigate">Cambiar Página Solo</option><option value="cursor">Cambiar Icono Mouse</option><option value="audio">Reproducir Audio</option><option value="floating">Componente Flotante</option>
-                            </select>
-
-                            {b.actionType === 'input-match' && (
-                              <input placeholder="Palabra clave necesaria..." value={b.triggerValue || ""} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].triggerValue = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]" />
-                            )}
-
-                            {b.actionResult === 'cursor' && (
-                              <input placeholder="URL de imagen para cursor..." value={b.mouseIcon || ""} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].mouseIcon = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]" />
-                            )}
-
-                            {b.actionResult === 'audio' && (
-                              <input placeholder="URL de archivo audio..." value={b.audioUrl || ""} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].audioUrl = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]" />
-                            )}
-
-                            {b.actionResult === 'floating' && (
-                              <div className="space-y-2 border-l-2 border-blue-500 pl-2">
-                                 <select value={b.floatingProps?.type || "text"} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].floatingProps = {...(blocks[idx].floatingProps || {content: "", pos: {top: "20px", left: "20px"}}), type: e.target.value}; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-1 text-[9px]">
-                                    <option value="text">Texto</option><option value="image">Imagen</option><option value="html">HTML</option>
-                                 </select>
-                                 <input placeholder="Contenido flotante..." value={b.floatingProps?.content || ""} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].floatingProps = {...(blocks[idx].floatingProps || {type: "text", pos: {top: "20px", left: "20px"}}), content: e.target.value}; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded text-[9px]" />
-                                 <div className="grid grid-cols-2 gap-1">
-                                    <input placeholder="Top (px/%)" value={b.floatingProps?.pos.top || ""} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].floatingProps!.pos.top = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="bg-zinc-900 p-1 text-[9px]" />
-                                    <input placeholder="Left (px/%)" value={b.floatingProps?.pos.left || ""} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].floatingProps!.pos.left = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="bg-zinc-900 p-1 text-[9px]" />
-                                 </div>
-                              </div>
-                            )}
-
-                            {(b.actionResult === 'discover' || b.actionResult === 'navigate') && (
-                              <div className="space-y-1">
-                                <label className="text-[8px] uppercase text-zinc-600 font-black">Destino (ID o URL)</label>
-                                <input 
-                                  list="pages-list"
-                                  placeholder="Escribe ID o pega URL..."
-                                  value={b.clueLink} 
-                                  onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} 
-                                  className="w-full bg-zinc-900 p-2 rounded border border-zinc-800 text-blue-400"
-                                />
-                                <datalist id="pages-list">
-                                  {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid]?.title || pid}</option>)}
-                                </datalist>
-                              </div>
-                            )}
-                         </div>
-
-                         <button onClick={() => { const blocks = currentPage.blocks.filter(block => block.id !== b.id); setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full p-2 bg-red-600/10 text-red-500 text-[9px] font-black uppercase rounded-lg hover:bg-red-600/20">Eliminar</button>
+                      <div className="p-4 bg-zinc-950 border-t border-zinc-800 space-y-4">
+                         <select value={b.type} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].type = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white">
+                            <option value="text">Texto</option><option value="image">Imagen</option><option value="video">Video</option><option value="html">HTML</option>
+                         </select>
+                         <textarea value={b.content} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].content = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[60px] outline-none focus:border-blue-500" />
+                         <button onClick={() => { const blocks = currentPage.blocks.filter(block => block.id !== b.id); setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full p-2 bg-red-600/10 text-red-500 text-[9px] font-black uppercase rounded-lg">Borrar</button>
                       </div>
                     )}
                   </div>
@@ -466,6 +439,7 @@ function PageRenderer({ page, isDev, onNavigate, onBack, history, onFooterClick,
     backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed'
   };
 
+  // Lógica de Ancho en PC (Por defecto 100% si no existe)
   const contentWidthClass = (page?.layoutWidth === "80%" && !isMobileEnv) ? "max-w-[80%] mx-auto" : "max-w-full";
 
   return (
