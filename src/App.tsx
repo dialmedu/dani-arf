@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft, MousePointer2, Volume2, Maximize
+  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft, MousePointer2, Volume2, Maximize, Link as LinkIcon
 } from 'lucide-react';
 
 // --- INTERFACES ---
@@ -10,14 +10,14 @@ interface Block {
   id: string;
   type: string; // 'text' | 'image' | 'video' | 'html'
   content: string;
-  position: 'relative' | 'fixed'; // Nuevo: Control de ubicación
+  position: 'relative' | 'fixed'; 
   actionType: string; // 'none' | 'hover' | 'long-hover' | 'click' | 'double-click' | 'triple-click' | 'input-match'
   actionResult: string; // 'discover' | 'navigate' | 'cursor' | 'audio' | 'appear'
   clueLink: string;     // ID de página o URL
-  triggerValue?: string; // Para input-match
-  mouseIcon?: string;    // URL de imagen para cursor
-  audioUrl?: string;     // URL de audio
-  posProps?: { top?: string; bottom?: string; left?: string; right?: string }; // Para posición fixed
+  triggerValue?: string; 
+  mouseIcon?: string;    
+  audioUrl?: string;     
+  posProps?: { top?: string; bottom?: string; left?: string; right?: string }; 
   options: { scale: number };
 }
 
@@ -30,7 +30,7 @@ interface Page {
   no_pc?: boolean;     
   no_mobile?: boolean; 
   layoutWidth?: string; // "100%" o "80%"
-  backgroundImage?: string; // Fondo de página
+  backgroundImage?: string; 
 }
 
 interface Config {
@@ -102,6 +102,9 @@ export default function App() {
   const [isMobileEnv, setIsMobileEnv] = useState(false);
   const [rawJson, setRawJson] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
+  
+  // UI State para el modo de link del editor
+  const [isExternalLinkMode, setIsExternalLinkMode] = useState(false);
   
   const [globalCursor, setGlobalCursor] = useState<string | null>(null);
   const [revealedComponents, setRevealedComponents] = useState<string[]>([]);
@@ -387,7 +390,40 @@ export default function App() {
                             )}
 
                             {(b.actionResult === 'discover' || b.actionResult === 'navigate') && (
-                              <input placeholder="ID Página o URL..." value={b.clueLink} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold" />
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+                                   <button 
+                                      onClick={() => setIsExternalLinkMode(false)}
+                                      className={`flex-1 py-1 text-[8px] font-black rounded uppercase transition-all ${!isExternalLinkMode ? 'bg-blue-600 text-white' : 'text-zinc-500'}`}
+                                   >
+                                      Interno
+                                   </button>
+                                   <button 
+                                      onClick={() => setIsExternalLinkMode(true)}
+                                      className={`flex-1 py-1 text-[8px] font-black rounded uppercase transition-all ${isExternalLinkMode ? 'bg-blue-600 text-white' : 'text-zinc-500'}`}
+                                   >
+                                      Externo
+                                   </button>
+                                </div>
+                                
+                                {isExternalLinkMode ? (
+                                  <input 
+                                    placeholder="https://..." 
+                                    value={b.clueLink} 
+                                    onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} 
+                                    className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold" 
+                                  />
+                                ) : (
+                                  <select 
+                                    value={b.clueLink} 
+                                    onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} 
+                                    className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold"
+                                  >
+                                    <option value="">Seleccionar página...</option>
+                                    {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid]?.title || pid}</option>)}
+                                  </select>
+                                )}
+                              </div>
                             )}
                          </div>
 
