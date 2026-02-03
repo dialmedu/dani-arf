@@ -15,7 +15,21 @@
           "options": {
             "scale": 100
           },
-          "actionResult": "discover"
+          "actionResult": "navigate",
+          "mouseIcon": "https://cdn-icons-png.freepik.com/512/1363/1363376.png"
+        },
+        {
+          "id": "b1770096058178",
+          "type": "text",
+          "content": "El mejor caballo es el que estudia",
+          "position": "relative",
+          "actionType": "input-match",
+          "actionResult": "navigate",
+          "clueLink": "pg1770092902680",
+          "options": {
+            "scale": 100
+          },
+          "triggerValue": "unicornio"
         }
       ],
       "layoutWidth": "80%"
