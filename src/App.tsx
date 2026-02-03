@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  ChevronUp, ChevronDown, Edit3
+  Edit3, GripVertical, Monitor, Tv, FileText
 } from 'lucide-react';
 
-// --- DEFINICIÓN DE TIPOS ---
+// --- INTERFACES ---
 interface Block {
   id: string;
   type: string;
@@ -29,40 +29,14 @@ interface Config {
   homePageId: string;
 }
 
-// --- DATOS INICIALES ---
 const INITIAL_DATA: Config = {
   pages: {
     'home': {
-      id: 'home',
-      title: 'El Umbral de los Dos Mundos',
-      theme: 'journal',
-      publishDate: new Date().toISOString(),
-      blocks: [
-        { id: 'b1', type: 'text', content: 'Existen dos realidades entrelazadas. El mundo de arriba, de los hombres, y el de abajo, de las hadas.', actionType: 'none', clueLink: '', options: { scale: 100 } },
-        { id: 'b2', type: 'text', content: 'Los humanos son animales que desean ser algo más para escapar del peso de la tierra...', actionType: 'hover', clueLink: 'mundo-arriba', options: { scale: 100 } },
-        { id: 'b3', type: 'text', content: 'Las hadas son el espejo de tus propios deseos; si dejas de desear, ellas dejan de existir.', actionType: 'triple-click', clueLink: 'mundo-abajo', options: { scale: 100 } }
-      ]
-    },
-    'mundo-arriba': {
-      id: 'mundo-arriba',
-      title: 'El Mundo de Arriba',
-      theme: 'default',
-      publishDate: new Date().toISOString(),
-      blocks: [
-        { id: 'b4', type: 'text', content: 'La gravedad aquí es una ley física y emocional. Los deseos se arrastran buscando el cielo.', actionType: 'none', clueLink: '', options: { scale: 100 } }
-      ]
-    },
-    'mundo-abajo': {
-      id: 'mundo-abajo',
-      title: 'El Reflejo de Abajo',
-      theme: 'retro-tv',
-      publishDate: new Date().toISOString(),
-      blocks: [
-        { id: 'b6', type: 'text', content: 'Has descendido al reflejo. Aquí la señal es débil, como la voluntad de quien olvida su origen.', actionType: 'none', clueLink: '', options: { scale: 100 } }
-      ]
+      id: 'home', title: 'El Umbral', theme: 'journal', publishDate: new Date().toISOString(),
+      blocks: [{ id: 'b1', type: 'text', content: 'Cargando historia...', actionType: 'none', clueLink: '', options: { scale: 100 } }]
     }
   },
-  pageOrder: ['home', 'mundo-arriba', 'mundo-abajo'],
+  pageOrder: ['home'],
   homePageId: 'home'
 };
 
@@ -70,22 +44,14 @@ const themeStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime&family=Inter:wght@400;900&display=swap');
   .theme-journal { font-family: 'Special Elite', cursive; background-color: #f4e4bc; background-image: url('https://www.transparenttextures.com/patterns/old-map.png'); color: #2c1e11; box-shadow: inset 0 0 100px rgba(0,0,0,0.1); }
   .theme-tv { background-color: #0a0a0a; color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.6); font-family: 'Courier Prime', monospace; }
-  .scanlines { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 4px, 3px 100%; }
-  @keyframes flicker { 0% { opacity: 0.1; } 50% { opacity: 0.15; } 100% { opacity: 0.1; } }
-  .flicker { animation: flicker 0.1s infinite; position: absolute; inset: 0; pointer-events: none; z-index: 11; background: white; opacity: 0.05; }
+  .scanlines { position: absolute; inset: 0; pointer-events: none; z-index: 10; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; }
+  @keyframes flicker { 0% { opacity: 0.1; } 100% { opacity: 0.12; } }
+  .flicker { animation: flicker 0.1s infinite; position: absolute; inset: 0; pointer-events: none; z-index: 11; background: white; opacity: 0.03; }
 `;
 
 export default function App() {
-  const [config, setConfig] = useState<Config>(() => {
-    if (typeof window === 'undefined') return INITIAL_DATA;
-    const saved = localStorage.getItem('enigma_reorder_v2');
-    if (!saved) return INITIAL_DATA;
-    const parsed = JSON.parse(saved);
-    if (!parsed.pageOrder) parsed.pageOrder = Object.keys(parsed.pages);
-    return parsed;
-  });
-
-  const [currentPageId, setCurrentPageId] = useState(config.homePageId);
+  const [config, setConfig] = useState<Config>(INITIAL_DATA);
+  const [currentPageId, setCurrentPageId] = useState("");
   const [isDev, setIsDev] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -95,7 +61,31 @@ export default function App() {
   const [devClicks, setDevClicks] = useState(0);
   const [devMsg, setDevMsg] = useState("");
 
+  // Carga de configuración desde JSON o LocalStorage
   useEffect(() => {
+    const loadData = async () => {
+      const saved = localStorage.getItem('enigma_v7_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setConfig(parsed);
+        setCurrentPageId(parsed.homePageId);
+      } else {
+        try {
+          const response = await fetch('/config.json');
+          if (response.ok) {
+            const data = await response.json();
+            setConfig(data);
+            setCurrentPageId(data.homePageId);
+          }
+        } catch (e) {
+          console.log("No se detectó config.json, usando datos iniciales.");
+          setConfig(INITIAL_DATA);
+          setCurrentPageId(INITIAL_DATA.homePageId);
+        }
+      }
+    };
+    loadData();
+
     const style = document.createElement('style');
     style.textContent = themeStyles;
     document.head.append(style);
@@ -103,57 +93,46 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('enigma_reorder_v2', JSON.stringify(config));
+    if (config !== INITIAL_DATA) {
+      localStorage.setItem('enigma_v7_data', JSON.stringify(config));
+    }
   }, [config]);
 
-  const onFooterClick = () => {
-    const n = devClicks + 1;
-    setDevClicks(n);
-    if (n >= 5 && n < 10) setDevMsg(`Modo editor en ${10 - n}...`);
-    if (n >= 10) { setShowLogin(true); setDevClicks(0); setDevMsg(""); }
-    setTimeout(() => { setDevClicks(0); setDevMsg(""); }, 5000);
+  // --- LÓGICA DE DRAG & DROP ---
+  const handleDragStart = (e: React.DragEvent, id: string, type: 'page' | 'block') => {
+    e.dataTransfer.setData('id', id);
+    e.dataTransfer.setData('type', type);
   };
 
+  const handleDrop = (e: React.DragEvent, targetId: string, type: 'page' | 'block') => {
+    const draggedId = e.dataTransfer.getData('id');
+    const draggedType = e.dataTransfer.getData('type');
+    if (draggedType !== type || draggedId === targetId) return;
+
+    if (type === 'page') {
+      const newOrder = [...config.pageOrder];
+      const fromIdx = newOrder.indexOf(draggedId);
+      const toIdx = newOrder.indexOf(targetId);
+      newOrder.splice(fromIdx, 1);
+      newOrder.splice(toIdx, 0, draggedId);
+      setConfig({ ...config, pageOrder: newOrder });
+    } else {
+      const blocks = [...config.pages[currentPageId].blocks];
+      const fromIdx = blocks.findIndex(b => b.id === draggedId);
+      const toIdx = blocks.findIndex(b => b.id === targetId);
+      const [draggedBlock] = blocks.splice(fromIdx, 1);
+      blocks.splice(toIdx, 0, draggedBlock);
+      setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...config.pages[currentPageId], blocks } } });
+    }
+  };
+
+  // --- ACCIONES ---
   const handleLogin = () => {
     if (password === "Daniela") {
       setIsDev(true); setShowLogin(false); setSidebarOpen(true); setPassword("");
     } else alert("Clave incorrecta");
   };
 
-  // --- ACCIONES DE PÁGINAS ---
-  const addPage = () => {
-    const id = 'pg' + Date.now();
-    const newPage: Page = { id, title: 'Nueva Página', theme: 'default', publishDate: new Date().toISOString(), blocks: [] };
-    setConfig(prev => ({ 
-      ...prev, 
-      pages: { ...prev.pages, [id]: newPage },
-      pageOrder: [...prev.pageOrder, id]
-    }));
-    setCurrentPageId(id);
-  };
-
-  const deletePage = (id: string) => {
-    if (Object.keys(config.pages).length <= 1) return;
-    const { [id]: _, ...remainingPages } = config.pages;
-    const newOrder = config.pageOrder.filter(pid => pid !== id);
-    setConfig(prev => ({
-      ...prev,
-      pages: remainingPages,
-      pageOrder: newOrder,
-      homePageId: prev.homePageId === id ? newOrder[0] : prev.homePageId
-    }));
-    if (currentPageId === id) setCurrentPageId(newOrder[0]);
-  };
-
-  const movePage = (index: number, direction: 'up' | 'down') => {
-    const newOrder = [...config.pageOrder];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
-    setConfig(prev => ({ ...prev, pageOrder: newOrder }));
-  };
-
-  // --- ACCIONES DE BLOQUES ---
   const addBlock = () => {
     const id = 'b' + Date.now();
     const pg = config.pages[currentPageId];
@@ -163,37 +142,31 @@ export default function App() {
     setActiveTab('blocks');
   };
 
-  const moveBlock = (idx: number, direction: 'up' | 'down') => {
-    const pg = config.pages[currentPageId];
-    const newBlocks = [...pg.blocks];
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= newBlocks.length) return;
-    [newBlocks[idx], newBlocks[targetIdx]] = [newBlocks[targetIdx], newBlocks[idx]];
-    setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks: newBlocks } } });
-  };
-
-  const currentPage = config.pages[currentPageId] || config.pages[config.homePageId];
+  const currentPage = config.pages[currentPageId] || Object.values(config.pages)[0];
 
   return (
     <div className={`flex h-screen w-full transition-colors duration-500 overflow-hidden ${isDev ? 'bg-zinc-900' : 'bg-slate-50'}`}>
+      
+      {/* MODAL DE LOGIN */}
       {showLogin && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
           <div className="bg-zinc-900 border border-zinc-800 p-10 rounded-[3rem] w-full max-w-sm shadow-2xl text-center">
             <Lock className="mx-auto text-blue-500 mb-6" size={56} />
-            <h2 className="text-white font-black uppercase tracking-widest mb-8 text-xl">ACCESO</h2>
             <input type="password" autoFocus value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} className="w-full bg-zinc-800 border border-zinc-700 p-5 rounded-2xl text-white text-center text-3xl mb-6 outline-none" placeholder="••••" />
             <button onClick={handleLogin} className="w-full bg-blue-600 p-5 rounded-2xl text-white font-black uppercase tracking-widest shadow-lg">ENTRAR</button>
-            <button onClick={() => setShowLogin(false)} className="mt-6 text-zinc-500 text-sm font-bold">Cerrar</button>
+            <button onClick={() => setShowLogin(false)} className="mt-6 text-zinc-500 text-sm">Cancelar</button>
           </div>
         </div>
       )}
 
+      {/* PANEL DE EDITOR */}
       {isDev && (
         <aside className={`h-full bg-zinc-950 border-r border-zinc-800 flex flex-col z-[100] transition-all duration-300 ${sidebarOpen ? 'w-[85vw] md:w-80' : 'w-0 overflow-hidden'}`}>
           <div className="p-4 border-b border-zinc-900 flex justify-between items-center shrink-0">
-            <span className="text-xs font-black uppercase text-white tracking-widest flex items-center gap-2"><Sparkles size={16} className="text-blue-400" /> ENIGMA CMS</span>
+            <span className="text-xs font-black uppercase text-white tracking-widest flex items-center gap-2"><Sparkles size={16} className="text-blue-400" /> ENIGMA</span>
             <button onClick={() => setSidebarOpen(false)} className="text-zinc-500"><X size={20}/></button>
           </div>
+
           <div className="flex border-b border-zinc-900 shrink-0">
             {['pages', 'design', 'blocks'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-4 flex flex-col items-center gap-1 transition-all ${activeTab === tab ? 'text-blue-400 bg-blue-400/5' : 'text-zinc-600'}`}>
@@ -202,82 +175,81 @@ export default function App() {
               </button>
             ))}
           </div>
+
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* PESTAÑA: PÁGINAS */}
             {activeTab === 'pages' && (
-              <div className="space-y-4 animate-in fade-in duration-500">
-                <div className="flex justify-between items-center mb-2 text-white"><h4 className="text-[10px] font-black uppercase text-zinc-600">Páginas</h4><button onClick={addPage} className="text-blue-500"><Plus size={18}/></button></div>
+              <div className="space-y-4 animate-in fade-in">
+                <div className="flex justify-between items-center text-white"><h4 className="text-[10px] font-black uppercase tracking-widest">Orden de Navegación</h4><button onClick={() => {const id='pg'+Date.now(); setConfig(prev=>({...prev, pages:{...prev.pages, [id]:{id, title:'Nueva', theme:'default', publishDate:new Date().toISOString(), blocks:[]}}, pageOrder:[...prev.pageOrder, id]})); setCurrentPageId(id);}} className="text-blue-500"><Plus size={18}/></button></div>
                 <div className="space-y-2">
-                  {config.pageOrder.map((pid, idx) => {
-                    const p = config.pages[pid];
-                    return (
-                      <div key={pid} className={`p-3 rounded-2xl border flex items-center gap-2 transition-all ${currentPageId === pid ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
-                        <div className="flex flex-col gap-1">
-                          <button onClick={() => movePage(idx, 'up')} className="hover:text-white disabled:opacity-20" disabled={idx === 0}><ChevronUp size={12}/></button>
-                          <button onClick={() => movePage(idx, 'down')} className="hover:text-white disabled:opacity-20" disabled={idx === config.pageOrder.length - 1}><ChevronDown size={12}/></button>
-                        </div>
-                        <span onClick={() => setCurrentPageId(pid)} className="flex-1 text-xs font-bold uppercase truncate cursor-pointer">{p.title}</span>
-                        <button onClick={() => deletePage(pid)} className="hover:text-red-400 ml-2"><Trash2 size={14}/></button>
-                      </div>
-                    );
-                  })}
+                  {config.pageOrder.map((pid) => (
+                    <div 
+                      key={pid} draggable onDragStart={(e) => handleDragStart(e, pid, 'page')} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, pid, 'page')}
+                      className={`p-3 rounded-2xl border flex items-center gap-3 cursor-grab transition-all ${currentPageId === pid ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                    >
+                      <GripVertical size={14} className="opacity-40" />
+                      <span onClick={() => setCurrentPageId(pid)} className="flex-1 text-xs font-bold uppercase truncate">{config.pages[pid].title}</span>
+                      <button onClick={() => {if(config.pageOrder.length > 1){ const {[pid]:_, ...rest} = config.pages; setConfig(p=>({...p, pages:rest, pageOrder:p.pageOrder.filter(id=>id!==pid)})); setCurrentPageId(config.pageOrder[0]); }}}><Trash2 size={14}/></button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-            
+
+            {/* PESTAÑA: DISEÑO (CORREGIDA) */}
+            {activeTab === 'design' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-zinc-600 block mb-2">Nombre de la Página</label>
+                  <input value={currentPage.title} onChange={e => setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, title: e.target.value}}})} className="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-xs text-white outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-zinc-600 block mb-2">Seleccionar Plantilla</label>
+                  <div className="grid gap-2">
+                    {[
+                      {id: 'default', label: 'Mundo Real', icon: Monitor},
+                      {id: 'journal', label: 'Diario Antiguo', icon: FileText},
+                      {id: 'retro-tv', label: 'Televisor Retro', icon: Tv}
+                    ].map(t => (
+                      <button key={t.id} onClick={() => setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, theme: t.id}}})} className={`p-4 rounded-2xl border text-[10px] font-black uppercase text-left flex items-center gap-3 transition-all ${currentPage.theme === t.id ? 'bg-emerald-600/10 border-emerald-500 text-emerald-400' : 'bg-zinc-900 border-zinc-800 text-zinc-600 hover:border-zinc-700'}`}>
+                        <t.icon size={16} /> {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={() => setConfig({...config, homePageId: currentPageId})} className={`w-full p-4 rounded-2xl border text-[10px] font-black uppercase flex items-center justify-center gap-2 ${config.homePageId === currentPageId ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500' : 'bg-zinc-900 border-zinc-800 text-zinc-600'}`}>Establecer como Inicio</button>
+              </div>
+            )}
+
+            {/* PESTAÑA: BLOQUES */}
             {activeTab === 'blocks' && (
-              <div className="space-y-4 pb-20 animate-in fade-in duration-500 text-white">
-                <div className="flex justify-between items-center mb-2"><h4 className="text-[10px] font-black uppercase text-zinc-600">Gestión de Bloques</h4><button onClick={addBlock} className="bg-blue-600 text-white p-1 rounded-lg"><Plus size={18}/></button></div>
+              <div className="space-y-4 pb-20 animate-in fade-in text-white">
+                <div className="flex justify-between items-center mb-2"><h4 className="text-[10px] font-black uppercase tracking-widest">Contenido</h4><button onClick={addBlock} className="bg-blue-600 p-1 rounded-lg"><Plus size={18}/></button></div>
                 {currentPage.blocks.map((b: Block, idx: number) => (
-                  <div key={b.id} className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all ${editingId === b.id ? 'border-blue-500 shadow-xl' : 'border-slate-800'}`}>
-                    <div className="p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                         <div className="flex flex-col text-zinc-500">
-                           <button onClick={() => moveBlock(idx, 'up')} className="hover:text-white disabled:opacity-20" disabled={idx === 0}><ChevronUp size={14}/></button>
-                           <button onClick={() => moveBlock(idx, 'down')} className="hover:text-white disabled:opacity-20" disabled={idx === currentPage.blocks.length - 1}><ChevronDown size={14}/></button>
-                         </div>
-                         <span onClick={() => setEditingId(editingId === b.id ? null : b.id)} className="text-[9px] font-black uppercase text-zinc-500 cursor-pointer">{b.type}: {b.content.substring(0,12)}...</span>
+                  <div key={b.id} draggable onDragStart={(e) => handleDragStart(e, b.id, 'block')} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, b.id, 'block')} className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all ${editingId === b.id ? 'border-blue-500' : 'border-slate-800'}`}>
+                    <div className="p-3 flex items-center justify-between cursor-grab">
+                      <div className="flex items-center gap-2">
+                         <GripVertical size={12} className="opacity-30" />
+                         <span onClick={() => setEditingId(editingId === b.id ? null : b.id)} className="text-[9px] font-black uppercase text-zinc-500">{b.type}: {b.content.substring(0,10)}...</span>
                       </div>
-                      <Settings onClick={() => setEditingId(editingId === b.id ? null : b.id)} size={12} className="text-zinc-600 cursor-pointer hover:text-white transition-colors" />
+                      <Settings onClick={() => setEditingId(editingId === b.id ? null : b.id)} size={12} className="text-zinc-600 cursor-pointer" />
                     </div>
                     {editingId === b.id && (
                       <div className="p-4 bg-zinc-950 border-t border-zinc-800 space-y-4">
-                         <div className="space-y-1">
-                           <label className="text-[8px] uppercase font-bold text-zinc-600">Tipo de Contenido</label>
-                           <select 
-                             value={b.type} 
-                             onChange={e => {
-                               const blocks = [...currentPage.blocks];
-                               blocks[idx].type = e.target.value;
-                               setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}});
-                             }} 
-                             className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white outline-none"
-                           >
-                             <option value="text">Texto</option>
-                             <option value="image">Imagen (URL)</option>
-                             <option value="video">Video (YT/TikTok)</option>
-                             <option value="html">HTML Personalizado</option>
+                         <select value={b.type} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].type = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white">
+                            <option value="text">Texto</option><option value="image">Imagen</option><option value="video">Video</option><option value="html">HTML</option>
+                         </select>
+                         <textarea value={b.content} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].content = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[60px] outline-none" />
+                         <div className="grid grid-cols-2 gap-2">
+                           <select value={b.actionType} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].actionType = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded text-[9px] text-slate-500">
+                             <option value="none">Sin Pista</option><option value="hover">Hover</option><option value="long-hover">3s</option><option value="triple-click">3 Clics</option>
+                           </select>
+                           <select value={b.clueLink} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded text-[9px] text-slate-500">
+                             <option value="">Destino...</option>
+                             {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid].title}</option>)}
                            </select>
                          </div>
-                         <div className="space-y-1">
-                           <label className="text-[8px] uppercase font-bold text-zinc-600">Contenido / URL</label>
-                           <textarea value={b.content} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].content = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[80px] outline-none focus:border-blue-500" />
-                         </div>
-                         <div className="grid grid-cols-2 gap-2">
-                           <div className="space-y-1">
-                             <label className="text-[8px] uppercase font-bold text-zinc-600">Acción</label>
-                             <select value={b.actionType} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].actionType = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded text-[9px] text-slate-500 outline-none">
-                               <option value="none">Ninguna</option><option value="hover">Hover</option><option value="long-hover">3s</option><option value="triple-click">3 Clics</option>
-                             </select>
-                           </div>
-                           <div className="space-y-1">
-                             <label className="text-[8px] uppercase font-bold text-zinc-600">Destino</label>
-                             <select value={b.clueLink} onChange={e => { const blocks = [...currentPage.blocks]; blocks[idx].clueLink = e.target.value; setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full bg-zinc-900 p-2 rounded text-[9px] text-slate-500 outline-none">
-                               <option value="">Ninguno</option>
-                               {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid].title}</option>)}
-                             </select>
-                           </div>
-                         </div>
-                         <button onClick={() => { const blocks = currentPage.blocks.filter(block => block.id !== b.id); setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full p-2 bg-red-600/10 text-red-500 text-[9px] font-black uppercase rounded-lg hover:bg-red-600/20">Eliminar Fragmento</button>
+                         <button onClick={() => { const blocks = currentPage.blocks.filter(block => block.id !== b.id); setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}}); }} className="w-full p-2 bg-red-600/10 text-red-500 text-[9px] font-black uppercase rounded-lg">Borrar</button>
                       </div>
                     )}
                   </div>
@@ -288,14 +260,13 @@ export default function App() {
         </aside>
       )}
 
+      {/* ÁREA DE PREVISUALIZACIÓN */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {isDev && (
-          <div className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-6 z-50 shrink-0 shadow-sm transition-all duration-300">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2.5 bg-zinc-100 rounded-2xl text-zinc-900 hover:bg-zinc-200 transition-all">{sidebarOpen ? <X size={20}/> : <Menu size={20}/>}</button>
-            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Panel de Edición
-            </div>
-            <button onClick={() => setIsDev(false)} className="px-5 py-2 bg-zinc-950 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg hover:bg-slate-800 transition-all"><EyeOff size={14} className="inline mr-2"/> Finalizar</button>
+          <div className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-6 shrink-0 z-50 shadow-sm">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2.5 bg-zinc-100 rounded-2xl text-zinc-900">{sidebarOpen ? <X size={20}/> : <Menu size={20}/>}</button>
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Modo Desarrollador</div>
+            <button onClick={() => setIsDev(false)} className="px-5 py-2 bg-zinc-950 text-white rounded-2xl text-[10px] font-black uppercase"><EyeOff size={14} className="inline mr-2"/> Salir</button>
           </div>
         )}
         <div className={`flex-1 overflow-y-auto scroll-smooth transition-all duration-700 ${isDev ? 'p-6 md:p-12' : 'p-0'}`}>
@@ -304,7 +275,12 @@ export default function App() {
                 page={currentPage} 
                 isDev={isDev} 
                 onNavigate={(id: string) => { setCurrentPageId(id); window.scrollTo(0,0); }} 
-                onFooterClick={onFooterClick} 
+                onFooterClick={() => {
+                  const n = devClicks + 1; setDevClicks(n);
+                  if (n >= 5 && n < 10) setDevMsg(`Activando editor en ${10 - n}...`);
+                  if (n >= 10) { setShowLogin(true); setDevClicks(0); setDevMsg(""); }
+                  setTimeout(() => { setDevClicks(0); setDevMsg(""); }, 5000);
+                }} 
                 onSelectBlock={(id: string) => { setEditingId(id); setActiveTab('blocks'); setSidebarOpen(true); }} 
                 msg={devMsg} 
              />
@@ -331,8 +307,8 @@ function PageRenderer({ page, isDev, onNavigate, onFooterClick, onSelectBlock, m
         </header>
         <div className="space-y-24">
           {page.blocks.map((b: Block) => (
-            <div key={b.id} onClick={e => { if(isDev) { e.stopPropagation(); onSelectBlock(b.id); } }} className={isDev ? 'cursor-edit hover:ring-2 hover:ring-blue-500 rounded-2xl p-2 transition-all group relative' : ''}>
-              {isDev && <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-blue-500"><Edit3 size={16}/></div>}
+            <div key={b.id} onClick={e => { if(isDev) { e.stopPropagation(); onSelectBlock(b.id); } }} className={isDev ? 'cursor-edit hover:ring-2 hover:ring-blue-500 rounded-2xl p-2 transition-all relative group' : ''}>
+              {isDev && <Edit3 size={16} className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-blue-500" />}
               <HiddenWrapper block={b} onNavigate={onNavigate} isDev={isDev}>
                 <BlockRenderer block={b} />
               </HiddenWrapper>
@@ -359,9 +335,9 @@ function HiddenWrapper({ block, children, onNavigate, isDev }: any) {
 
   return (
     <div onMouseEnter={onEnter} onMouseLeave={onLeave} onClick={onClick} className="relative transition-all duration-500">
-      <div className={`${revealed && block.clueLink ? 'opacity-10 blur-xl pointer-events-none scale-90' : 'transition-all duration-700'}`}>{children}</div>
+      <div className={`${revealed && block.clueLink ? 'opacity-10 blur-xl pointer-events-none' : 'transition-all duration-700'}`}>{children}</div>
       {revealed && block.clueLink && !isDev && (
-        <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in fade-in duration-500 z-50">
+        <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-500 z-50">
            <button onClick={(e) => { e.stopPropagation(); onNavigate(block.clueLink); }} className="bg-black text-white px-10 py-5 rounded-full font-black uppercase text-xs tracking-widest shadow-2xl flex items-center gap-3 border border-white/20 transition-all hover:scale-110 active:scale-95"><Share2 size={16}/> DESCUBRIR</button>
         </div>
       )}
@@ -378,7 +354,7 @@ function BlockRenderer({ block }: { block: Block }) {
   };
   switch(block.type) {
     case 'text': return <p className="text-xl md:text-5xl leading-[1.05] tracking-tighter whitespace-pre-wrap">{block.content}</p>;
-    case 'image': return <img src={block.content} className="w-full rounded-[2.5rem] shadow-2xl grayscale-[0.6] hover:grayscale-0 transition-all duration-1000" alt="Visual" />;
+    case 'image': return <img src={block.content} className="w-full rounded-[2.5rem] shadow-2xl grayscale-[0.6] hover:grayscale-0 transition-all duration-1000" alt="Enigma" />;
     case 'video': return <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white/5"><iframe src={parseVideo(block.content)} title="Contenido" className="w-full h-full" allowFullScreen /></div>;
     case 'html': return <div dangerouslySetInnerHTML={{ __html: block.content }} />;
     default: return null;
