@@ -2,23 +2,24 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft, MousePointer2, Volume2, Maximize, Link as LinkIcon, GitBranch, Copy
+  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, ArrowLeft, MousePointer2, Volume2, Maximize, Link as LinkIcon, GitBranch, Paintbrush
 } from 'lucide-react';
 
 // --- INTERFACES ---
 interface Block {
   id: string;
-  type: string; // 'text' | 'image' | 'video' | 'html'
+  type: string; 
   content: string;
   position: 'relative' | 'fixed'; 
-  actionType: string; // 'none' | 'hover' | 'long-hover' | 'click' | 'double-click' | 'triple-click' | 'input-match'
-  actionResult: string; // 'discover' | 'navigate' | 'cursor' | 'audio' | 'appear' | 'replace'
+  actionType: string; 
+  actionResult: string; 
   clueLink: string;     
   triggerValue?: string; 
   mouseIcon?: string;    
   audioUrl?: string;     
   posProps?: { top?: string; bottom?: string; left?: string; right?: string }; 
-  subBlock?: Block; // Componente anidado para apariciones o reemplazos
+  subBlock?: Block; 
+  extraStyles?: any; // Nuevo: Atributos CSS personalizados
   options: { scale: number };
 }
 
@@ -45,7 +46,7 @@ const INITIAL_DATA: Config = {
     'inicio': {
       id: 'inicio', title: 'El Umbral', theme: 'journal', publishDate: new Date().toISOString(),
       blocks: [
-        { id: 'b1', type: 'text', content: 'Escribe "enigma" para avanzar.', position: 'relative', actionType: 'input-match', triggerValue: 'enigma', actionResult: 'discover', clueLink: 'inicio', options: { scale: 100 } }
+        { id: 'b1', type: 'text', content: 'Escribe "enigma" para avanzar.', position: 'relative', actionType: 'input-match', triggerValue: 'enigma', actionResult: 'discover', clueLink: 'inicio', options: { scale: 100 }, extraStyles: {} }
       ],
       layoutWidth: '100%'
     }
@@ -98,6 +99,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('pages');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSubBlock, setEditingSubBlock] = useState(false); 
+  const [blockEditTab, setBlockEditTab] = useState<'content' | 'style'>('content'); // Nueva pestaña interna
   const [password, setPassword] = useState("");
   const [devClicks, setDevClicks] = useState(0);
   const [devMsg, setDevMsg] = useState("");
@@ -113,7 +115,7 @@ export default function App() {
     window.addEventListener('resize', checkEnv);
     
     const loadData = async () => {
-      const saved = localStorage.getItem('enigma_v15_pro');
+      const saved = localStorage.getItem('enigma_v16_styles');
       if (saved) {
         const parsed = JSON.parse(saved);
         setConfig(parsed);
@@ -148,7 +150,7 @@ export default function App() {
 
   useEffect(() => {
     if (config !== INITIAL_DATA) {
-      localStorage.setItem('enigma_v15_pro', JSON.stringify(config));
+      localStorage.setItem('enigma_v16_styles', JSON.stringify(config));
     }
   }, [config]);
 
@@ -188,37 +190,6 @@ export default function App() {
     window.scrollTo(0,0);
   };
 
-  const addBlock = () => {
-    const id = 'b' + Date.now();
-    const pg = config.pages[currentPageId];
-    if (!pg) return;
-    const newBlock: Block = { 
-      id, type: 'text', content: 'Nuevo misterio...', 
-      position: 'relative', actionType: 'none', actionResult: 'discover', clueLink: '', 
-      options: { scale: 100 } 
-    };
-    setConfig(prev => ({...prev, pages: {...prev.pages, [currentPageId]: {...pg, blocks: [...pg.blocks, newBlock]}}}));
-    setEditingId(id); setActiveTab('blocks');
-  };
-
-  const updateCurrentBlock = (upd: Partial<Block>) => {
-    const pg = config.pages[currentPageId];
-    const blocks = pg.blocks.map(b => b.id === editingId ? { ...b, ...upd } : b);
-    setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
-  };
-
-  const updateSubBlock = (upd: Partial<Block>) => {
-    const pg = config.pages[currentPageId];
-    const blocks = pg.blocks.map(b => {
-      if (b.id === editingId) {
-        return { ...b, subBlock: { ...(b.subBlock as Block), ...upd } };
-      }
-      return b;
-    });
-    setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
-  };
-
-  // --- LÓGICA DE DRAG & DROP (RESTAURADA) ---
   const handleDragStart = (e: React.DragEvent, id: string, type: 'page' | 'block') => {
     e.dataTransfer.setData('id', id);
     e.dataTransfer.setData('type', type);
@@ -247,6 +218,36 @@ export default function App() {
     }
   };
 
+  const addBlock = () => {
+    const id = 'b' + Date.now();
+    const pg = config.pages[currentPageId];
+    if (!pg) return;
+    const newBlock: Block = { 
+      id, type: 'text', content: 'Nuevo misterio...', 
+      position: 'relative', actionType: 'none', actionResult: 'discover', clueLink: '', 
+      options: { scale: 100 }, extraStyles: {}
+    };
+    setConfig(prev => ({...prev, pages: {...prev.pages, [currentPageId]: {...pg, blocks: [...pg.blocks, newBlock]}}}));
+    setEditingId(id); setActiveTab('blocks');
+  };
+
+  const updateCurrentBlock = (upd: Partial<Block>) => {
+    const pg = config.pages[currentPageId];
+    const blocks = pg.blocks.map(b => b.id === editingId ? { ...b, ...upd } : b);
+    setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
+  };
+
+  const updateSubBlock = (upd: Partial<Block>) => {
+    const pg = config.pages[currentPageId];
+    const blocks = pg.blocks.map(b => {
+      if (b.id === editingId) {
+        return { ...b, subBlock: { ...(b.subBlock as Block), ...upd } };
+      }
+      return b;
+    });
+    setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...pg, blocks } } });
+  };
+
   const currentPage = config.pages[currentPageId] || config.pages[config.homePageId];
 
   return (
@@ -266,9 +267,9 @@ export default function App() {
         </div>
       )}
 
-      {/* PANEL DE EDITOR (SIDEBAR) */}
+      {/* PANEL DE EDITOR */}
       {isDev && (
-        <aside className={`h-full bg-zinc-950 border-r border-zinc-800 flex flex-col z-[100] transition-all duration-300 ${sidebarOpen ? 'w-[95vw] md:w-[480px]' : 'w-0 overflow-hidden'}`}>
+        <aside className={`h-full bg-zinc-950 border-r border-zinc-800 flex flex-col z-[100] transition-all duration-300 ${sidebarOpen ? 'w-[95vw] md:w-[500px]' : 'w-0 overflow-hidden'}`}>
           <div className="p-4 border-b border-zinc-900 flex justify-between items-center shrink-0">
             <span className="text-xs font-black uppercase text-white tracking-widest flex items-center gap-2"><Sparkles size={16} className="text-blue-400" /> CMS ENGINE PRO</span>
             <button onClick={() => setSidebarOpen(false)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
@@ -316,10 +317,9 @@ export default function App() {
               </div>
             )}
 
-            {/* TAB: ÁRBOL DE COMPONENTES */}
             {activeTab === 'tree' && (
               <div className="space-y-4 animate-in fade-in">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Estructura de Nodos: {currentPage.title}</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Estructura: {currentPage.title}</h4>
                 <div className="space-y-3 pl-2 border-l border-zinc-800">
                   {currentPage.blocks.map((b) => (
                     <div key={b.id} className="space-y-2">
@@ -330,7 +330,7 @@ export default function App() {
                        {b.subBlock && (
                          <div onClick={() => { setEditingId(b.id); setEditingSubBlock(true); setActiveTab('blocks'); }} className={`flex items-center gap-2 p-2 ml-4 rounded-lg cursor-pointer hover:bg-zinc-900 transition-colors border-l-2 border-zinc-800 ${editingId === b.id && editingSubBlock ? 'bg-zinc-800 text-amber-400 border border-amber-900/30' : 'text-zinc-500'}`}>
                             <GitBranch size={12}/>
-                            <span className="font-mono text-[9px]">CHILD: {b.subBlock.type}</span>
+                            <span className="font-mono text-[9px]">HIJO: {b.subBlock.type}</span>
                          </div>
                        )}
                     </div>
@@ -347,14 +347,7 @@ export default function App() {
                   const blockToEdit = (isCurrent && editingSubBlock && b.subBlock) ? b.subBlock : b;
                   
                   return (
-                    <div 
-                      key={b.id} 
-                      draggable 
-                      onDragStart={(e) => handleDragStart(e, b.id, 'block')} 
-                      onDragOver={(e) => e.preventDefault()} 
-                      onDrop={(e) => handleDrop(e, b.id, 'block')}
-                      className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all cursor-grab ${isCurrent ? 'border-blue-500 shadow-xl' : 'border-slate-800'}`}
-                    >
+                    <div key={b.id} draggable onDragStart={(e) => handleDragStart(e, b.id, 'block')} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, b.id, 'block')} className={`bg-zinc-900 border rounded-2xl overflow-hidden transition-all cursor-grab ${isCurrent ? 'border-blue-500 shadow-xl' : 'border-slate-800'}`}>
                       <div className="p-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                            <GripVertical size={12} className="opacity-30" />
@@ -364,127 +357,122 @@ export default function App() {
                       </div>
                       
                       {isCurrent && (
-                        <div className="p-4 bg-zinc-950 border-t border-zinc-800 space-y-4">
-                           {/* HEADER DE SUB-EDICIÓN */}
-                           {editingSubBlock && (
-                             <div className="bg-amber-500/10 border border-amber-500/30 p-2 rounded-xl flex justify-between items-center mb-4">
-                                <span className="text-[8px] font-black uppercase text-amber-500 flex items-center gap-1"><GitBranch size={10}/> Editando Hijo</span>
-                                <button onClick={() => setEditingSubBlock(false)} className="text-[8px] font-black bg-amber-500 text-black px-2 py-0.5 rounded">Volver al Padre</button>
-                             </div>
-                           )}
-
-                           <div className="grid grid-cols-2 gap-2">
-                             <div>
-                                <label className="text-[8px] uppercase text-zinc-600 font-black mb-1 block">Tipo Bloque</label>
-                                <select 
-                                  value={blockToEdit.type} 
-                                  onChange={e => {
-                                    if (editingSubBlock) updateSubBlock({ type: e.target.value });
-                                    else updateCurrentBlock({ type: e.target.value });
-                                  }} 
-                                  className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]"
-                                >
-                                  <option value="text">Texto</option><option value="image">Imagen</option><option value="video">Video</option><option value="html">HTML</option>
-                                </select>
-                             </div>
-                             <div>
-                                <label className="text-[8px] uppercase text-zinc-600 font-black mb-1 block">Posición</label>
-                                <select 
-                                  value={blockToEdit.position} 
-                                  onChange={e => {
-                                    if (editingSubBlock) updateSubBlock({ position: e.target.value as any });
-                                    else updateCurrentBlock({ position: e.target.value as any });
-                                  }}
-                                  className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]"
-                                >
-                                  <option value="relative">Inline (Normal)</option><option value="fixed">Fixed (Flotante)</option>
-                                </select>
-                             </div>
+                        <div className="p-0 bg-zinc-950 border-t border-zinc-800">
+                           {/* Pestañas de edición interna del bloque */}
+                           <div className="flex border-b border-zinc-800 bg-zinc-900">
+                             <button onClick={() => setBlockEditTab('content')} className={`flex-1 p-3 flex items-center justify-center gap-2 font-black uppercase text-[8px] transition-all ${blockEditTab === 'content' ? 'text-blue-400 bg-zinc-950 border-b border-blue-400' : 'text-zinc-600'}`}><FileCode size={12}/> Contenido</button>
+                             <button onClick={() => setBlockEditTab('style')} className={`flex-1 p-3 flex items-center justify-center gap-2 font-black uppercase text-[8px] transition-all ${blockEditTab === 'style' ? 'text-amber-400 bg-zinc-950 border-b border-amber-400' : 'text-zinc-600'}`}><Paintbrush size={12}/> Estilo CSS</button>
                            </div>
 
-                           {blockToEdit.position === 'fixed' && (
-                             <div className="grid grid-cols-2 gap-2 bg-blue-500/5 p-2 rounded border border-blue-500/20">
-                               <input placeholder="Top (ej 20px)" value={blockToEdit.posProps?.top || ""} onChange={e => {
-                                 const p = {...(blockToEdit.posProps||{}), top: e.target.value};
-                                 if (editingSubBlock) updateSubBlock({ posProps: p }); else updateCurrentBlock({ posProps: p });
-                               }} className="bg-zinc-900 p-1 rounded text-[10px]" />
-                               <input placeholder="Left (ej 50%)" value={blockToEdit.posProps?.left || ""} onChange={e => {
-                                 const p = {...(blockToEdit.posProps||{}), left: e.target.value};
-                                 if (editingSubBlock) updateSubBlock({ posProps: p }); else updateCurrentBlock({ posProps: p });
-                               }} className="bg-zinc-900 p-1 rounded text-[10px]" />
-                             </div>
-                           )}
+                           <div className="p-4 space-y-4">
+                             {blockEditTab === 'content' ? (
+                               <div className="space-y-4 animate-in fade-in">
+                                 {editingSubBlock && (
+                                   <div className="bg-amber-500/10 border border-amber-500/30 p-2 rounded-xl flex justify-between items-center mb-2">
+                                      <span className="text-[8px] font-black uppercase text-amber-500 flex items-center gap-1"><GitBranch size={10}/> Editando Hijo</span>
+                                      <button onClick={() => setEditingSubBlock(false)} className="text-[8px] font-black bg-amber-500 text-black px-2 py-0.5 rounded">Padre</button>
+                                   </div>
+                                 )}
 
-                           <div className="space-y-1">
-                              <label className="text-[8px] uppercase text-zinc-600 font-black mb-1 block">Interactividad (Trigger)</label>
-                              <select value={blockToEdit.actionType} onChange={e => {
-                                if (editingSubBlock) updateSubBlock({ actionType: e.target.value });
-                                else updateCurrentBlock({ actionType: e.target.value });
-                              }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]">
-                                <option value="none">Visible Siempre</option>
-                                <option value="hover">Al pasar mouse</option>
-                                <option value="long-hover">Esperar 3 seg</option>
-                                <option value="click">Al hacer click</option>
-                                <option value="double-click">Doble Click</option>
-                                <option value="triple-click">Triple Click</option>
-                                <option value="input-match">Input de Clave</option>
-                              </select>
+                                 <div className="grid grid-cols-2 gap-2">
+                                   <div>
+                                      <label className="text-[8px] uppercase text-zinc-600 font-black mb-1 block">Tipo</label>
+                                      <select value={blockToEdit.type} onChange={e => { if (editingSubBlock) updateSubBlock({ type: e.target.value }); else updateCurrentBlock({ type: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]">
+                                        <option value="text">Texto</option><option value="image">Imagen</option><option value="video">Video</option><option value="html">HTML</option>
+                                      </select>
+                                   </div>
+                                   <div>
+                                      <label className="text-[8px] uppercase text-zinc-600 font-black mb-1 block">Ubicación</label>
+                                      <select value={blockToEdit.position} onChange={e => { if (editingSubBlock) updateSubBlock({ position: e.target.value as any }); else updateCurrentBlock({ position: e.target.value as any }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]">
+                                        <option value="relative">Normal</option><option value="fixed">Fijo</option>
+                                      </select>
+                                   </div>
+                                 </div>
+
+                                 {blockToEdit.position === 'fixed' && (
+                                   <div className="grid grid-cols-2 gap-2 bg-blue-500/5 p-2 rounded border border-blue-500/20 text-[10px]">
+                                     <input placeholder="Top (20px)" value={blockToEdit.posProps?.top || ""} onChange={e => { const p = {...(blockToEdit.posProps||{}), top: e.target.value}; if (editingSubBlock) updateSubBlock({ posProps: p }); else updateCurrentBlock({ posProps: p }); }} className="bg-zinc-900 p-1 rounded" />
+                                     <input placeholder="Left (50%)" value={blockToEdit.posProps?.left || ""} onChange={e => { const p = {...(blockToEdit.posProps||{}), left: e.target.value}; if (editingSubBlock) updateSubBlock({ posProps: p }); else updateCurrentBlock({ posProps: p }); }} className="bg-zinc-900 p-1 rounded" />
+                                   </div>
+                                 )}
+
+                                 <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 space-y-3">
+                                    <label className="text-[8px] uppercase text-blue-400 font-black block">Lógica e Interacción</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                       <select value={blockToEdit.actionType} onChange={e => { if (editingSubBlock) updateSubBlock({ actionType: e.target.value }); else updateCurrentBlock({ actionType: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[9px]">
+                                          <option value="none">Sin Acción</option><option value="hover">Hover</option><option value="long-hover">Long Hover</option><option value="click">Click</option><option value="double-click">Doble Click</option><option value="triple-click">3 Clicks</option><option value="input-match">Clave Secreta</option>
+                                       </select>
+                                       <select value={blockToEdit.actionResult} onChange={e => {
+                                          const val = e.target.value; const upd: Partial<Block> = { actionResult: val };
+                                          if ((val === 'appear' || val === 'replace') && !blockToEdit.subBlock) {
+                                            upd.subBlock = { id: 'child-' + Date.now(), type: 'text', content: 'Contenido...', position: 'relative', actionType: 'none', actionResult: 'discover', clueLink: '', options: { scale: 100 }, extraStyles: {} };
+                                          }
+                                          if (editingSubBlock) updateSubBlock(upd); else updateCurrentBlock(upd);
+                                       }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[9px]">
+                                          <option value="discover">Botón Descubrir</option><option value="navigate">Nav Directa</option><option value="cursor">Cambiar Cursor</option><option value="audio">Audio</option><option value="appear">Aparecer Hijo</option><option value="replace">Reemplazar</option>
+                                       </select>
+                                    </div>
+
+                                    {blockToEdit.actionType === 'input-match' && (
+                                      <input placeholder="Clave secreta..." value={blockToEdit.triggerValue || ""} onChange={e => { if (editingSubBlock) updateSubBlock({ triggerValue: e.target.value }); else updateCurrentBlock({ triggerValue: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded" />
+                                    )}
+
+                                    {blockToEdit.actionResult === 'audio' && (
+                                      <input placeholder="URL del Audio (mp3)..." value={blockToEdit.audioUrl || ""} onChange={e => { if (editingSubBlock) updateSubBlock({ audioUrl: e.target.value }); else updateCurrentBlock({ audioUrl: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-amber-500" />
+                                    )}
+
+                                    {blockToEdit.actionResult === 'cursor' && (
+                                      <input placeholder="URL imagen cursor..." value={blockToEdit.mouseIcon || ""} onChange={e => { if (editingSubBlock) updateSubBlock({ mouseIcon: e.target.value }); else updateCurrentBlock({ mouseIcon: e.target.value }); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded" />
+                                    )}
+
+                                    {(blockToEdit.actionResult === 'appear' || blockToEdit.actionResult === 'replace') && (
+                                      <button onClick={() => setEditingSubBlock(true)} className="w-full p-2 bg-amber-600 text-black text-[8px] font-black uppercase rounded-lg hover:bg-amber-500 flex items-center justify-center gap-2 shadow-lg"><Edit3 size={10}/> Abrir Componente Hijo</button>
+                                    )}
+
+                                    {(blockToEdit.actionResult === 'discover' || blockToEdit.actionResult === 'navigate') && (
+                                      <div className="space-y-2">
+                                        <div className="flex justify-between items-center bg-zinc-900 p-1 rounded border border-zinc-800">
+                                           <button onClick={() => setIsExternalLinkMode(false)} className={`flex-1 py-1 text-[7px] font-black rounded uppercase transition-all ${!isExternalLinkMode ? 'bg-blue-600 text-white' : 'text-zinc-500'}`}>Interno</button>
+                                           <button onClick={() => setIsExternalLinkMode(true)} className={`flex-1 py-1 text-[7px] font-black rounded uppercase transition-all ${isExternalLinkMode ? 'bg-blue-600 text-white' : 'text-zinc-500'}`}>Externo</button>
+                                        </div>
+                                        {isExternalLinkMode ? (
+                                          <input placeholder="https://..." value={blockToEdit.clueLink} onChange={e => { if(editingSubBlock) updateSubBlock({clueLink: e.target.value}); else updateCurrentBlock({clueLink: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold" />
+                                        ) : (
+                                          <select value={blockToEdit.clueLink} onChange={e => { if(editingSubBlock) updateSubBlock({clueLink: e.target.value}); else updateCurrentBlock({clueLink: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold">
+                                            <option value="">Destino...</option>
+                                            {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid]?.title || pid}</option>)}
+                                          </select>
+                                        )}
+                                      </div>
+                                    )}
+                                 </div>
+                                 <textarea value={blockToEdit.content} onChange={e => { if(editingSubBlock) updateSubBlock({content: e.target.value}); else updateCurrentBlock({content: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[80px] outline-none" placeholder="Escribe el contenido aquí..." />
+                               </div>
+                             ) : (
+                               <div className="space-y-4 animate-in fade-in">
+                                  <label className="text-[8px] uppercase text-zinc-600 font-black block mb-1">Estilos CSS (JSON)</label>
+                                  <textarea 
+                                    value={JSON.stringify(blockToEdit.extraStyles || {}, null, 2)} 
+                                    onChange={e => {
+                                      try {
+                                        const parsed = JSON.parse(e.target.value);
+                                        if (editingSubBlock) updateSubBlock({ extraStyles: parsed });
+                                        else updateCurrentBlock({ extraStyles: parsed });
+                                      } catch (err) { /* Ignorar errores de escritura temporal */ }
+                                    }} 
+                                    className="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] text-amber-500 font-mono min-h-[200px] outline-none" 
+                                    placeholder='{ "borderRadius": "20px", "opacity": "0.8" }'
+                                  />
+                                  <p className="text-[8px] text-zinc-500 italic">Usa nombres en camelCase (ej: backgroundColor en vez de background-color).</p>
+                               </div>
+                             )}
+
+                             <button onClick={() => {
+                               const blocks = config.pages[currentPageId].blocks.filter(block => block.id !== b.id);
+                               setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}});
+                               setEditingId(null);
+                             }} className="w-full p-2 bg-red-600/10 text-red-500 text-[8px] font-black uppercase rounded-lg border border-red-500/20">Borrar Nodo</button>
                            </div>
-
-                           <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 space-y-3">
-                              <label className="text-[8px] uppercase text-blue-400 font-black block">Respuesta de Acción</label>
-                              <select value={blockToEdit.actionResult} onChange={e => {
-                                const val = e.target.value;
-                                const upd: Partial<Block> = { actionResult: val };
-                                if ((val === 'appear' || val === 'replace') && !blockToEdit.subBlock) {
-                                  upd.subBlock = { id: 'child-' + Date.now(), type: 'text', content: 'Contenido hijo...', position: 'relative', actionType: 'none', actionResult: 'discover', clueLink: '', options: { scale: 100 } };
-                                }
-                                if (editingSubBlock) updateSubBlock(upd); else updateCurrentBlock(upd);
-                              }} className="w-full bg-zinc-900 p-2 rounded border border-zinc-800 text-[10px]">
-                                 <option value="discover">Botón Descubrir</option>
-                                 <option value="navigate">Navegación Directa</option>
-                                 <option value="cursor">Cambiar Cursor</option>
-                                 <option value="audio">Reproducir Audio</option>
-                                 <option value="appear">Aparecer Hijo</option>
-                                 <option value="replace">Reemplazar por Hijo</option>
-                              </select>
-
-                              {blockToEdit.actionType === 'input-match' && (
-                                <input placeholder="Clave secreta..." value={blockToEdit.triggerValue || ""} onChange={e => {
-                                  if (editingSubBlock) updateSubBlock({ triggerValue: e.target.value }); else updateCurrentBlock({ triggerValue: e.target.value });
-                                }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px]" />
-                              )}
-
-                              {(blockToEdit.actionResult === 'appear' || blockToEdit.actionResult === 'replace') && (
-                                <button onClick={() => setEditingSubBlock(true)} className="w-full p-2 bg-amber-600 text-black text-[9px] font-black uppercase rounded-lg hover:bg-amber-500 transition-all flex items-center justify-center gap-2 shadow-lg">
-                                  <Edit3 size={12}/> Configurar Hijo
-                                </button>
-                              )}
-
-                              {(blockToEdit.actionResult === 'discover' || blockToEdit.actionResult === 'navigate') && (
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-                                     <button onClick={() => setIsExternalLinkMode(false)} className={`flex-1 py-1 text-[8px] font-black rounded uppercase transition-all ${!isExternalLinkMode ? 'bg-blue-600 text-white' : 'text-zinc-500'}`}>Interno</button>
-                                     <button onClick={() => setIsExternalLinkMode(true)} className={`flex-1 py-1 text-[8px] font-black rounded uppercase transition-all ${isExternalLinkMode ? 'bg-blue-600 text-white' : 'text-zinc-500'}`}>Externo</button>
-                                  </div>
-                                  {isExternalLinkMode ? (
-                                    <input placeholder="https://..." value={blockToEdit.clueLink} onChange={e => { if(editingSubBlock) updateSubBlock({clueLink: e.target.value}); else updateCurrentBlock({clueLink: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold text-[10px]" />
-                                  ) : (
-                                    <select value={blockToEdit.clueLink} onChange={e => { if(editingSubBlock) updateSubBlock({clueLink: e.target.value}); else updateCurrentBlock({clueLink: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-blue-400 font-bold text-[10px]">
-                                      <option value="">Página...</option>
-                                      {config.pageOrder.map(pid => <option key={pid} value={pid}>{config.pages[pid]?.title || pid}</option>)}
-                                    </select>
-                                  )}
-                                </div>
-                              )}
-                           </div>
-
-                           <textarea value={blockToEdit.content} onChange={e => { if(editingSubBlock) updateSubBlock({content: e.target.value}); else updateCurrentBlock({content: e.target.value}); }} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-[10px] text-white min-h-[60px] outline-none" />
-                           <button onClick={() => {
-                             const blocks = config.pages[currentPageId].blocks.filter(block => block.id !== b.id);
-                             setConfig({...config, pages: {...config.pages, [currentPageId]: {...currentPage, blocks}}});
-                             setEditingId(null);
-                           }} className="w-full p-2 bg-red-600/10 text-red-500 text-[9px] font-black uppercase rounded-lg">Eliminar</button>
                         </div>
                       )}
                     </div>
@@ -534,7 +522,7 @@ export default function App() {
         )}
 
         <div className={`flex-1 overflow-y-auto scroll-smooth transition-all duration-700 custom-scroll ${isDev ? 'p-6 md:p-12 bg-slate-100' : 'p-0 bg-white'}`}>
-          <div className={`mx-auto transition-all duration-700 min-h-full ${isDev ? 'bg-white shadow-2xl rounded-[3rem] border-[14px] border-zinc-900 max-w-[420px] md:max-w-7xl relative overflow-hidden' : 'w-full min-h-screen'}`}>
+          <div className={`mx-auto transition-all duration-700 min-h-full ${isDev ? 'bg-white shadow-2xl rounded-[3rem] border-[14px] border-zinc-900 max-w-[420px] md:max-w-[1400px] relative overflow-hidden' : 'w-full min-h-screen'}`}>
              <PageRenderer 
                 page={currentPage} 
                 isDev={isDev} 
@@ -548,7 +536,7 @@ export default function App() {
                   if (n >= 10) { setShowLogin(true); setDevClicks(0); setDevMsg(""); }
                   setTimeout(() => { setDevClicks(0); setDevMsg(""); }, 5000);
                 }} 
-                onSelectBlock={(id: string) => { setEditingId(id); setActiveTab('blocks'); setSidebarOpen(true); }} 
+                onSelectBlock={(id: string) => { setEditingId(id); setActiveTab('blocks'); setSidebarOpen(true); setBlockEditTab('content'); }} 
                 msg={devMsg} 
                 setGlobalCursor={setGlobalCursor}
              />
@@ -596,7 +584,10 @@ function PageRenderer({ page, isDev, onNavigate, onBack, history, onFooterClick,
               key={b.id} 
               onClick={e => { if(isDev) { e.stopPropagation(); onSelectBlock(b.id); } }} 
               className={`${isDev ? 'cursor-edit hover:ring-2 hover:ring-blue-500 rounded-2xl p-2 transition-all relative group' : ''} ${b.position === 'fixed' ? 'fixed z-[100]' : ''}`}
-              style={b.position === 'fixed' ? { top: b.posProps?.top, left: b.posProps?.left, right: b.posProps?.right, bottom: b.posProps?.bottom } : {}}
+              style={{
+                ...(b.position === 'fixed' ? { top: b.posProps?.top, left: b.posProps?.left, right: b.posProps?.right, bottom: b.posProps?.bottom } : {}),
+                ...(b.extraStyles || {})
+              }}
             >
               {isDev && <Edit3 size={16} className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-blue-500" />}
               <HiddenWrapper block={b} onNavigate={onNavigate} isDev={isDev} setGlobalCursor={setGlobalCursor}>
@@ -625,7 +616,10 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor }: 
     setRevealed(true);
     if (block.actionResult === 'navigate' && block.clueLink) onNavigate(block.clueLink);
     if (block.actionResult === 'cursor' && block.mouseIcon) setGlobalCursor(block.mouseIcon);
-    if (block.actionResult === 'audio' && block.audioUrl) new Audio(block.audioUrl).play();
+    if (block.actionResult === 'audio' && block.audioUrl) {
+      const audio = new Audio(block.audioUrl);
+      audio.play().catch(e => console.log("Error al reproducir audio:", e));
+    }
   };
 
   const onEnter = () => { 
@@ -651,7 +645,7 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor }: 
   };
 
   return (
-    <div onMouseEnter={onEnter} onMouseLeave={onLeave} onClick={onClick} className="relative transition-all duration-500">
+    <div onMouseEnter={onEnter} onMouseLeave={onLeave} onClick={onClick} className="relative transition-all duration-500 h-full w-full">
       <div className={`${revealed && (block.actionResult === 'discover' || block.actionResult === 'navigate') ? 'opacity-10 blur-xl pointer-events-none scale-95' : 'transition-all duration-700'}`}>
         {/* Renderizado de Reemplazo */}
         {revealed && block.actionResult === 'replace' && block.subBlock ? (
@@ -668,10 +662,13 @@ function HiddenWrapper({ block, children, onNavigate, isDev, setGlobalCursor }: 
         )}
       </div>
 
-      {/* Renderizado de Aparición (Hijo convive con Padre) */}
+      {/* Renderizado de Aparición */}
       {revealed && block.actionResult === 'appear' && block.subBlock && (
         <div className={`animate-in fade-in duration-500 ${block.subBlock.position === 'fixed' ? 'fixed z-[110]' : 'mt-6'}`}
-             style={block.subBlock.position === 'fixed' ? { top: block.subBlock.posProps?.top, left: block.subBlock.posProps?.left } : {}}>
+             style={{
+               ...(block.subBlock.position === 'fixed' ? { top: block.subBlock.posProps?.top, left: block.subBlock.posProps?.left } : {}),
+               ...(block.subBlock.extraStyles || {})
+             }}>
            <BlockRenderer block={block.subBlock} />
         </div>
       )}
@@ -694,11 +691,14 @@ function BlockRenderer({ block }: { block: Block }) {
     if (url.includes('tiktok.com')) return `https://www.tiktok.com/embed/v2/${url.split('/video/')[1]?.split('?')[0]}`;
     return url;
   };
+
+  const commonStyle = block.extraStyles || {};
+
   switch(block.type) {
-    case 'text': return <p className="text-xl md:text-6xl leading-[1] tracking-tighter whitespace-pre-wrap">{block.content}</p>;
-    case 'image': return <img src={block.content} className="w-full rounded-[2.5rem] shadow-2xl grayscale-[0.6] hover:grayscale-0 transition-all duration-1000" alt="Enigma" />;
-    case 'video': return <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white/5"><iframe src={parseVideo(block.content)} title="Contenido" className="w-full h-full" allowFullScreen /></div>;
-    case 'html': return <div dangerouslySetInnerHTML={{ __html: block.content }} />;
+    case 'text': return <p className="text-xl md:text-6xl leading-[1] tracking-tighter whitespace-pre-wrap" style={commonStyle}>{block.content}</p>;
+    case 'image': return <img src={block.content} className="w-full rounded-[2.5rem] shadow-2xl grayscale-[0.6] hover:grayscale-0 transition-all duration-1000" style={commonStyle} alt="Enigma" />;
+    case 'video': return <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl bg-black border-4 border-white/5" style={commonStyle}><iframe src={parseVideo(block.content)} title="Contenido" className="w-full h-full" allowFullScreen /></div>;
+    case 'html': return <div style={commonStyle} dangerouslySetInnerHTML={{ __html: block.content }} />;
     default: return null;
   }
 }
