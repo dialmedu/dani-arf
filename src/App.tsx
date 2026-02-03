@@ -112,7 +112,6 @@ export default function App() {
   useEffect(() => {
     if (config !== INITIAL_DATA) {
       localStorage.setItem('enigma_v8_data', JSON.stringify(config));
-      // No actualizamos rawJson aquí para no interrumpir al usuario mientras escribe
     }
   }, [config]);
 
@@ -181,6 +180,33 @@ export default function App() {
       blocks.splice(toIdx, 0, draggedBlock);
       setConfig({ ...config, pages: { ...config.pages, [currentPageId]: { ...config.pages[currentPageId], blocks } } });
     }
+  };
+
+  // --- FUNCIÓN PARA AÑADIR BLOQUE (RESTAURADA) ---
+  const addBlock = () => {
+    const id = 'b' + Date.now();
+    const pg = config.pages[currentPageId];
+    if (!pg) return;
+    const newBlock: Block = { 
+      id, 
+      type: 'text', 
+      content: 'Nuevo fragmento...', 
+      actionType: 'none', 
+      clueLink: '', 
+      options: { scale: 100 } 
+    };
+    setConfig(prev => ({
+      ...prev,
+      pages: {
+        ...prev.pages,
+        [currentPageId]: {
+          ...pg,
+          blocks: [...pg.blocks, newBlock]
+        }
+      }
+    }));
+    setEditingId(id);
+    setActiveTab('blocks');
   };
 
   const handleLogin = () => {
@@ -387,6 +413,16 @@ export default function App() {
              />
           </div>
         </div>
+
+        {/* BOTÓN FLOTANTE PARA AÑADIR BLOQUE (MÓVIL) */}
+        {isDev && (
+          <button 
+            onClick={addBlock}
+            className="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[110] hover:scale-110 active:scale-90 transition-all ring-4 ring-white lg:hidden"
+          >
+            <Plus size={32}/>
+          </button>
+        )}
       </main>
     </div>
   );
