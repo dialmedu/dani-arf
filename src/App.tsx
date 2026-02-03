@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, EyeOff, Layers, Home, Lock,
   Share2, Menu, X, Palette, Sparkles, Trash2, Settings,
-  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone, Maximize
+  Edit3, GripVertical, Monitor, Tv, FileText, ExternalLink, FileCode, Check, AlertCircle, Smartphone
 } from 'lucide-react';
 
 // --- INTERFACES ---
@@ -23,8 +23,8 @@ interface Page {
   blocks: Block[];
   no_pc?: boolean;     
   no_mobile?: boolean; 
-  layoutWidth?: string; // Nuevo: "100%" o "80%"
-  backgroundImage?: string; // Nuevo: URL de fondo
+  layoutWidth?: string; // "100%" o "80%"
+  backgroundImage?: string; // URL de fondo
 }
 
 interface Config {
@@ -194,6 +194,17 @@ export default function App() {
     setEditingId(id); setActiveTab('blocks');
   };
 
+  const handleLogin = () => {
+    if (password === "Daniela") {
+      setIsDev(true); 
+      setShowLogin(false); 
+      setSidebarOpen(true); 
+      setPassword("");
+    } else {
+      alert("Clave incorrecta");
+    }
+  };
+
   const currentPage = config.pages[currentPageId] || config.pages[config.homePageId];
 
   return (
@@ -203,8 +214,21 @@ export default function App() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-6 text-white">
           <div className="bg-zinc-900 border border-zinc-800 p-10 rounded-[3rem] w-full max-w-sm shadow-2xl text-center">
             <Lock className="mx-auto text-blue-500 mb-6" size={56} />
-            <input type="password" autoFocus value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} className="w-full bg-zinc-800 border border-zinc-700 p-5 rounded-2xl text-white text-center text-3xl mb-6 outline-none" placeholder="••••" />
-            <button onClick={() => { if(password === "Daniela") { setIsDev(true); setShowLogin(false); setSidebarOpen(true); setPassword(""); } else alert("Clave incorrecta"); }} className="w-full bg-blue-600 p-5 rounded-2xl text-white font-black uppercase tracking-widest shadow-lg hover:bg-blue-500 transition-all">ENTRAR</button>
+            <input 
+              type="password" 
+              autoFocus 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && handleLogin()} 
+              className="w-full bg-zinc-800 border border-zinc-700 p-5 rounded-2xl text-white text-center text-3xl mb-6 outline-none" 
+              placeholder="••••" 
+            />
+            <button 
+              onClick={handleLogin} 
+              className="w-full bg-blue-600 p-5 rounded-2xl text-white font-black uppercase tracking-widest shadow-lg hover:bg-blue-500 transition-all"
+            >
+              ENTRAR
+            </button>
             <button onClick={() => setShowLogin(false)} className="mt-6 text-zinc-500 text-sm">Cancelar</button>
           </div>
         </div>
@@ -345,6 +369,7 @@ export default function App() {
                   <Smartphone size={14} className={isMobileEnv ? 'text-blue-500' : ''} />
                </div>
             </div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Modo Edición</div>
             <button onClick={() => setIsDev(false)} className="px-5 py-2 bg-zinc-950 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all"><EyeOff size={14} className="inline mr-2"/> Salir</button>
           </div>
         )}
@@ -388,7 +413,6 @@ function PageRenderer({ page, isDev, onNavigate, onFooterClick, onSelectBlock, m
   const isHidden = !isDev && ((isMobileEnv && page?.no_mobile) || (!isMobileEnv && page?.no_pc));
   if (isHidden) return <div className="p-20 text-center text-zinc-400 italic bg-white h-screen flex items-center justify-center font-sans">Contenido no disponible en este dispositivo.</div>;
 
-  // Lógica de Ancho y Fondo
   const containerStyle = {
     backgroundImage: page?.backgroundImage ? `url(${page.backgroundImage})` : 'none',
     backgroundSize: 'cover',
@@ -411,7 +435,6 @@ function PageRenderer({ page, isDev, onNavigate, onFooterClick, onSelectBlock, m
         </div>
       )}
 
-      {/* ÁREA DE CONTENIDO DINÁMICO */}
       <div className={`${contentWidthClass} w-full space-y-20 py-16 md:py-32 px-8 md:px-24 pb-40 z-20 relative transition-all duration-500`}>
         <header className="border-b-4 border-current pb-10 mb-20 animate-in slide-in-from-top duration-700">
           <h1 className="text-5xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] drop-shadow-sm">{page?.title || "Sin Título"}</h1>
