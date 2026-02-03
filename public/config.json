@@ -9,14 +9,56 @@
         {
           "id": "def-1",
           "type": "text",
-          "content": "Escribe aquí tu primera pista...",
+          "content": "Permanece aquí 3 segundo",
+          "actionType": "long-hover",
+          "clueLink": "pg1770092832902",
+          "options": {
+            "scale": 100
+          }
+        }
+      ]
+    },
+    "pg1770092832902": {
+      "id": "pg1770092832902",
+      "title": "Permanencia",
+      "theme": "journal",
+      "publishDate": "2026-02-03T04:27:12.902Z",
+      "blocks": [
+        {
+          "id": "b1770092872809",
+          "type": "text",
+          "content": "Tocame 3 veces",
           "actionType": "none",
           "clueLink": "",
-          "options": { "scale": 100 }
+          "options": {
+            "scale": 100
+          }
+        }
+      ]
+    },
+    "pg1770092902680": {
+      "id": "pg1770092902680",
+      "title": "final",
+      "theme": "retro-tv",
+      "publishDate": "2026-02-03T04:28:22.680Z",
+      "blocks": [
+        {
+          "id": "b1770092917485",
+          "type": "video",
+          "content": "https://youtu.be/dPCR-fzv_mE?si=4qUeqkzW7-8KT1k-",
+          "actionType": "none",
+          "clueLink": "",
+          "options": {
+            "scale": 100
+          }
         }
       ]
     }
   },
-  "pageOrder": ["inicio"],
+  "pageOrder": [
+    "inicio",
+    "pg1770092832902",
+    "pg1770092902680"
+  ],
   "homePageId": "inicio"
 }
