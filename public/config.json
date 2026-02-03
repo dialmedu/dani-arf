@@ -1,0 +1,22 @@
+{
+  "pages": {
+    "inicio": {
+      "id": "inicio",
+      "title": "Nueva Historia",
+      "theme": "default",
+      "publishDate": "2024-01-01T00:00:00.000Z",
+      "blocks": [
+        {
+          "id": "def-1",
+          "type": "text",
+          "content": "Escribe aquí tu primera pista...",
+          "actionType": "none",
+          "clueLink": "",
+          "options": { "scale": 100 }
+        }
+      ]
+    }
+  },
+  "pageOrder": ["inicio"],
+  "homePageId": "inicio"
+}
